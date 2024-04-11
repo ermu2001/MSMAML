@@ -1,6 +1,4 @@
 ipython
-torch=='1.2.0'
-torchvision=='0.4.0'
 imageio
 scikit-image
 tqdm
@@ -8,5 +6,8 @@ Pillow
 numpy
 scipy
 requests
-subprocess
 tensorboardX
+librosa
+matplotlib
+pandas
+seaborn
