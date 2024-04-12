@@ -6,7 +6,7 @@ python3 main.py \
     --verbose true\
     --model-type gated_conv_1d \
     --embedding-type ConvGRU1d \
-    --num-workers 0 \
+    --num-workers 16 \
     # --mmaml-model True \
 
 

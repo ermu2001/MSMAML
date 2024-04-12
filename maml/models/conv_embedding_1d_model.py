@@ -38,6 +38,7 @@ class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
         self._reuse = False
         self._verbose = verbose
         # TODO: plz do refactor this code here...
+        # import pdb; pdb.set_trace();
         if self._convolutional:
             self._conv_stride = 5
             self._features_size = 1

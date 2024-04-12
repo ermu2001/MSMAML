@@ -41,7 +41,7 @@ class GatedConv1dModel(Model):
         assert isinstance(kernel_size, int)
 
         # TODO: plz do refactor this code here...
-        import pdb; pdb.set_trace();
+        # import pdb; pdb.set_trace();
         if self._use_max_pool:
             # TODO: might be bug here, not tested
             self._conv_stride = 1
