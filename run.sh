@@ -1,7 +1,7 @@
 CUDA_VISIBLE_DEVICES=0
 python3 main.py \
     --dataset esc50 \
-    --num-batches 600000 \
+    --num-batches 60000 \
     --output-folder mmaml_5mode_5w1s \
     --verbose true\
     --model-type gated_conv_1d \

@@ -13,9 +13,9 @@ meta_df = pd.read_csv(metadata)
 meta_df = shuffle(meta_df)
 num_sample = len(meta_df)
 
-ptr = 70
-pvl = 15
-pts = 15
+ptr = 0.7
+pvl = 0.15
+pts = 0.15
 
 def load_audio(file_path):
   au, sr = librosa.load(os.path.join(audio_dir, file_path), sr=44100)
@@ -29,18 +29,21 @@ for row in tqdm(meta_df.itertuples(index=True, name='Pandas'), total=len(meta_df
     data.append(load_audio(row[1]))
     label.append(row[3])
     file.append(row[1])
+    
+tr_split = int(num_sample * ptr)
+vl_split = int(num_sample * (ptr + pvl))
 
-dtr = data[:num_sample * ptr]
-dvl = data[num_sample * ptr:num_sample * (ptr + pvl)]
-dts = data[num_sample * (ptr + pvl):]
+dtr = data[:tr_split]
+dvl = data[tr_split:vl_split]
+dts = data[vl_split:]
 
-ltr = label[:num_sample * ptr]
-lvl = label[num_sample * ptr:num_sample * (ptr + pvl)]
-lts = label[num_sample * (ptr + pvl):]
+ltr = label[:tr_split]
+lvl = label[tr_split:vl_split]
+lts = label[vl_split:]
 
-ftr = file[:num_sample * ptr]
-fvl = file[num_sample * ptr:num_sample * (ptr + pvl)]
-fts = file[num_sample * (ptr + pvl):]
+ftr = file[:tr_split]
+fvl = file[tr_split:vl_split]
+fts = file[vl_split:]
 
 labels = {
   "train": ltr, 
@@ -56,6 +59,8 @@ file = {
   "train": ftr, 
   "val": fvl, 
   "test": fts}
+
+import pdb; pdb.set_trace()
 
 torch.save({'data': data, 'label': labels, 'file': file}, './data/esc50.pth')
 
