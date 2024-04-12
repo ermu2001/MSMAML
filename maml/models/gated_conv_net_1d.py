@@ -39,51 +39,63 @@ class GatedConv1dModel(Model):
 
         assert isinstance(kernel_size, int)
 
+        # TODO: plz do refactor this code here...
         if self._use_max_pool:
-            self._conv_stride = 1
+            # TODO: might be bug here, not tested
+            self._conv_stride = 9
             self._features_size = 1
+            self._kernel_size = 13
+            self._pooling_kernel_size = 4
+            self._dialation = 5
+            # self._padding = "same" # not for strided conv
+            self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2 # this ensures the output to be devided by stride
+            
             self.features = torch.nn.Sequential(OrderedDict([
                 ('layer1_conv', torch.nn.Conv1d(self._input_channels,
                                                 self._num_channels,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer1_bn', torch.nn.BatchNorm1d(self._num_channels,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer1_condition', None),
-                ('layer1_max_pool', torch.nn.MaxPool1d(kernel_size=2,
-                                                       stride=2)),
+                ('layer1_max_pool', torch.nn.MaxPool1d(kernel_size=self._pooling_kernel_size,
+                                                       stride=self._pooling_kernel_size)),
                 ('layer1_relu', torch.nn.ReLU(inplace=True)),
                 ('layer2_conv', torch.nn.Conv1d(self._num_channels,
                                                 self._num_channels*2,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer2_bn', torch.nn.BatchNorm1d(self._num_channels*2,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer2_condition', None),
-                ('layer2_max_pool', torch.nn.MaxPool1d(kernel_size=2,
-                                                       stride=2)),
+                ('layer2_max_pool', torch.nn.MaxPool1d(kernel_size=self._pooling_kernel_size,
+                                                       stride=self._pooling_kernel_size)),
                 ('layer2_relu', torch.nn.ReLU(inplace=True)),
                 ('layer3_conv', torch.nn.Conv1d(self._num_channels*2,
                                                 self._num_channels*4,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer3_bn', torch.nn.BatchNorm1d(self._num_channels*4,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer3_condition', None),
-                ('layer3_max_pool', torch.nn.MaxPool1d(kernel_size=2,
-                                                       stride=2)),
+                ('layer3_max_pool', torch.nn.MaxPool1d(kernel_size=self._pooling_kernel_size,
+                                                       stride=self._pooling_kernel_size)),
                 ('layer3_relu', torch.nn.ReLU(inplace=True)),
                 ('layer4_conv', torch.nn.Conv1d(self._num_channels*4,
                                                 self._num_channels*8,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer4_bn', torch.nn.BatchNorm1d(self._num_channels*8,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
@@ -93,45 +105,54 @@ class GatedConv1dModel(Model):
                 ('layer4_relu', torch.nn.ReLU(inplace=True)),
             ]))
         else:
-            self._conv_stride = 2
-            self._features_size = (img_side_len // 14)**2
+            self._conv_stride = 1
+            self._features_size = 1
+            self._kernel_size = 13
+            self._dialation = 5
+            # self._padding = "same" # not for strided conv
+            self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2 # this ensures the output to be devided by stride
+            # self._features_size = (img_side_len // 14)**2
             self.features = torch.nn.Sequential(OrderedDict([
                 ('layer1_conv', torch.nn.Conv1d(self._input_channels,
                                                 self._num_channels,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer1_bn', torch.nn.BatchNorm1d(self._num_channels,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer1_condition', torch.nn.ReLU(inplace=True)),
                 ('layer1_relu', torch.nn.ReLU(inplace=True)),
-                ('layer2_conv', torch.nn.Conv1d(self._num_channels,
-                                                self._num_channels*2,
+                ('layer2_conv', torch.nn.Conv1d(self._num_channels * 1,
+                                                self._num_channels * 2,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
-                ('layer2_bn', torch.nn.BatchNorm1d(self._num_channels*2,
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
+                ('layer2_bn', torch.nn.BatchNorm1d(self._num_channels * 2,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer2_condition', torch.nn.ReLU(inplace=True)),
                 ('layer2_relu', torch.nn.ReLU(inplace=True)),
-                ('layer3_conv', torch.nn.Conv1d(self._num_channels*2,
-                                                self._num_channels*4,
+                ('layer3_conv', torch.nn.Conv1d(self._num_channels * 2,
+                                                self._num_channels * 4,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
-                ('layer3_bn', torch.nn.BatchNorm1d(self._num_channels*4,
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
+                ('layer3_bn', torch.nn.BatchNorm1d(self._num_channels * 4,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer3_condition', torch.nn.ReLU(inplace=True)),
                 ('layer3_relu', torch.nn.ReLU(inplace=True)),
-                ('layer4_conv', torch.nn.Conv1d(self._num_channels*4,
-                                                self._num_channels*8,
+                ('layer4_conv', torch.nn.Conv1d(self._num_channels * 4,
+                                                self._num_channels * 8,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
-                ('layer4_bn', torch.nn.BatchNorm1d(self._num_channels*8,
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
+                ('layer4_bn', torch.nn.BatchNorm1d(self._num_channels * 8,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer4_condition', torch.nn.ReLU(inplace=True)),
@@ -175,8 +196,12 @@ class GatedConv1dModel(Model):
             weight = params.get('features.' + layer_name + '.weight', None)
             bias = params.get('features.' + layer_name + '.bias', None)
             if 'conv' in layer_name:
-                x = F.conv1d(x, weight=weight, bias=bias,
-                             stride=self._conv_stride, padding=self._padding)
+                x = F.conv1d(x, 
+                             weight=weight,
+                             bias=bias,
+                             stride=self._conv_stride,
+                             padding=self._padding,
+                             dilation=self._dialation)
             elif 'condition' in layer_name:
                 x = self.conditional_layer(x, embeddings[layer_name]) if embeddings is not None else x
             elif 'bn' in layer_name:

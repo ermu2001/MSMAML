@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from maml.models.model import Model
@@ -20,7 +21,7 @@ class ConvModelOneDimensional(Model):
           https://arxiv.org/abs/1803.02999
     """
     def __init__(self, input_channels, output_size, num_channels=64,
-                 kernel_size=3, padding=1, nonlinearity=F.relu,
+                 kernel_size=5, padding=2, nonlinearity=F.relu,
                  use_max_pool=False, img_side_len=28, verbose=False):
         super(ConvModelOneDimensional, self).__init__()
         self._input_channels = input_channels
@@ -40,54 +41,65 @@ class ConvModelOneDimensional(Model):
         if self._use_max_pool:
             self._conv_stride = 1
             self._features_size = 1
+            self._dialation = 3
+            self._pooling_size = 4
+            self._padding = self._padding * (self._dialation + 1)
             self.features = torch.nn.Sequential(OrderedDict([
                 ('layer1_conv', torch.nn.Conv1d(self._input_channels,
                                                 self._num_channels,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer1_bn', torch.nn.BatchNorm1d(self._num_channels,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
-                ('layer1_max_pool', torch.nn.MaxPool1d(kernel_size=2,
-                                                       stride=2)),
+                ('layer1_max_pool', torch.nn.MaxPool1d(kernel_size=self._pooling_size,
+                                                       stride=self._pooling_size)),
                 ('layer1_relu', torch.nn.ReLU(inplace=True)),
                 ('layer2_conv', torch.nn.Conv1d(self._num_channels,
                                                 self._num_channels*2,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer2_bn', torch.nn.BatchNorm1d(self._num_channels*2,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
-                ('layer2_max_pool', torch.nn.MaxPool1d(kernel_size=2,
-                                                       stride=2)),
+                ('layer2_max_pool', torch.nn.MaxPool1d(kernel_size=self._pooling_size,
+                                                       stride=self._pooling_size)),
                 ('layer2_relu', torch.nn.ReLU(inplace=True)),
                 ('layer3_conv', torch.nn.Conv1d(self._num_channels*2,
                                                 self._num_channels*4,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer3_bn', torch.nn.BatchNorm1d(self._num_channels*4,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
-                ('layer3_max_pool', torch.nn.MaxPool1d(kernel_size=2,
-                                                       stride=2)),
+                ('layer3_max_pool', torch.nn.MaxPool1d(kernel_size=self._pooling_size,
+                                                       stride=self._pooling_size)),
                 ('layer3_relu', torch.nn.ReLU(inplace=True)),
                 ('layer4_conv', torch.nn.Conv1d(self._num_channels*4,
                                                 self._num_channels*8,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
-                                                padding=self._padding)),
+                                                padding=self._padding,
+                                                dilation=self._dialation)),
                 ('layer4_bn', torch.nn.BatchNorm1d(self._num_channels*8,
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
-                ('layer4_max_pool', torch.nn.MaxPool1d(kernel_size=2,
-                                                       stride=2)),
+                ('layer4_max_pool', torch.nn.MaxPool1d(kernel_size=self._pooling_size,
+                                                       stride=self._pooling_size)),
                 ('layer4_relu', torch.nn.ReLU(inplace=True)),
             ]))
         else:
-            self._conv_stride = 2
+            self._conv_stride = 4
+            self._features_size = 1
+            self._dialation = 3
+            self._pooling_size = 4
+            self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2
             self._features_size = (img_side_len // 14)**2
             self.features = torch.nn.Sequential(OrderedDict([
                 ('layer1_conv', torch.nn.Conv1d(self._input_channels,
@@ -142,18 +154,26 @@ class ConvModelOneDimensional(Model):
         x = task.x
         if not self._reuse and self._verbose: print('input size: {}'.format(x.size()))
         for layer_name, layer in self.features.named_children():
+            layer: nn.Conv1d
             weight = params.get('features.' + layer_name + '.weight', None)
             bias = params.get('features.' + layer_name + '.bias', None)
             if 'conv' in layer_name:
-                x = F.conv1d(x, weight=weight, bias=bias,
-                             stride=self._conv_stride, padding=self._padding)
+                x = F.conv1d(x, 
+                             weight=weight,
+                             bias=bias,
+                             stride=self._conv_stride,
+                             padding=self._padding,
+                             dilation=layer.dilation)
+
             elif 'bn' in layer_name:
-                x = F.batch_norm(x, weight=weight, bias=bias,
+                x = F.batch_norm(x, 
+                                 weight=weight,
+                                 bias=bias,
                                  running_mean=layer.running_mean,
                                  running_var=layer.running_var,
                                  training=True)
             elif 'max_pool' in layer_name:
-                x = F.max_pool1d(x, kernel_size=2, stride=2)
+                x = F.max_pool1d(x, kernel_size=3, stride=3)
             elif 'relu' in layer_name:
                 x = F.relu(x)
             elif 'fully_connected' in layer_name:

@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
@@ -36,15 +37,24 @@ class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
         self._avgpool_after_conv = avgpool_after_conv
         self._reuse = False
         self._verbose = verbose
-
+        # TODO: plz do refactor this code here...
         if self._convolutional:
+            self._conv_stride = 5
+            self._features_size = 1
+            self._kernel_size = 13
+            self._dialation = 5
+            # self._padding = "same" # not for strided conv
+            self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2 # this ensures the output to be devided by stride
             conv_list = OrderedDict([])
             num_ch = [self._img_size[0]] + [self._num_channels*2**i for i in range(self._num_conv)]
             num_ch = [min(num_channels_max, ch) for ch in num_ch]
             for i in range(self._num_conv):
-                conv_list.update({
-                    'conv{}'.format(i+1): 
-                        torch.nn.Conv1d(num_ch[i], num_ch[i+1], 3, stride=2, padding=1)})
+                conv_list.update({'conv{}'.format(i+1): torch.nn.Conv1d(num_ch[i],
+                                                                        num_ch[i+1],
+                                                                        self._kernel_size,
+                                                                        stride=self._conv_stride,
+                                                                        padding=self._padding,
+                                                                        dilation=self._dialation)})
                 if self._batch_norm:
                     conv_list.update({'bn{}'.format(i+1): torch.nn.BatchNorm1d(num_ch[i+1], momentum=0.001)})
                 conv_list.update({'relu{}'.format(i+1): torch.nn.ReLU(inplace=True)})
@@ -97,10 +107,16 @@ class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
             x = task.x
             if not self._reuse and self._verbose: print('input size: {}'.format(x.size()))
             for layer_name, layer in self.conv.named_children():
+                layer: nn.Conv1d
                 weight = params.get('conv.' + layer_name + '.weight', None)
                 bias = params.get('conv.' + layer_name + '.bias', None)
                 if 'conv' in layer_name:
-                    x = F.conv1d(x, weight=weight, bias=bias, stride=2, padding=1)
+                    x = F.conv1d(x,
+                                 weight=weight,
+                                 bias=bias,
+                                 stride=layer.stride,
+                                 padding=layer.padding,
+                                 dilation=layer.dilation)
                 elif 'relu' in layer_name:
                     x = F.relu(x)
                 elif 'bn' in layer_name:

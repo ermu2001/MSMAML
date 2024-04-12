@@ -9,6 +9,7 @@ from tensorboardX import SummaryWriter
 from maml.datasets.omniglot import OmniglotMetaDataset
 from maml.datasets.miniimagenet import MiniimagenetMetaDataset
 from maml.datasets.cifar100 import Cifar100MetaDataset
+from maml.datasets.esc50 import ESC50MetaDataset
 from maml.datasets.bird import BirdMetaDataset
 from maml.datasets.aircraft import AircraftMetaDataset
 from maml.datasets.multimodal_few_shot import MultimodalFewShotDataset
@@ -336,6 +337,22 @@ def main(args):
             device=args.device)
         loss_func = torch.nn.MSELoss()
         collect_accuracies = False
+    elif args.dataset == 'esc50':
+        dataset = ESC50MetaDataset(
+            root='data',
+            img_side_len=32,
+            img_channel=1,
+            num_classes_per_batch=args.num_classes_per_batch,
+            num_samples_per_class=args.num_samples_per_class,
+            num_total_batches=args.num_batches,
+            num_val_samples=args.num_val_samples,
+            meta_batch_size=args.meta_batch_size,
+            train=is_training,
+            num_train_classes=args.num_train_classes,
+            num_workers=args.num_workers,
+            device=args.device)
+        loss_func = torch.nn.CrossEntropyLoss()
+        collect_accuracies = True
     else:
         raise ValueError('Unrecognized dataset {}'.format(args.dataset))
 
@@ -687,7 +704,6 @@ if __name__ == '__main__':
             if args.condition_type == 'affine':
                 embedding_dim *= 2
             args.embedding_dims.append(embedding_dim)
-
     assert not (args.mmaml_model and args.maml_model)
 
     # mmaml model: gated conv + convGRU

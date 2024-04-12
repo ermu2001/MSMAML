@@ -1,15 +1,17 @@
+import functools
 import os
 import glob
 import random
 from collections import defaultdict
 
 import torch
+from torch.nn import Identity
 import numpy as np
 from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets.utils import list_files
-
+from torchaudio.transforms import Resample
 from maml.sampler import ClassBalancedSampler
 from maml.datasets.metadataset import Task
 
@@ -25,19 +27,25 @@ class ESC50MAMLSplit():
 
         self._dataset = torch.load(self.root)
         if self._train:
-            self._images = torch.FloatTensor(self._dataset['data']['train'].reshape([-1, 3, 32, 32]))
-            self._labels = torch.LongTensor(self._dataset['label']['train'])
+            self._audios = self._dataset['data']['train']
+            self._labels = self._dataset['label']['train']
+            # self._audios = torch.FloatTensor(self._dataset['data']['train'])
+            # self._labels = torch.LongTensor(self._dataset['label']['train'])
         else:
-            self._images = torch.FloatTensor(self._dataset['data']['test'].reshape([-1, 3, 32, 32]))
-            self._labels = torch.LongTensor(self._dataset['label']['test'])
+            self._audios = self._dataset['data']['train']
+            self._labels = self._dataset['label']['train']
 
     def __getitem__(self, index):
-        image = self._images[index]
-
+        audio = self._audios[index]
         if self.transform:
-            image = self.transform(self._images[index])
+            audio = self.transform(self._audios[index])
 
-        return image, self._labels[index]
+        return audio, self._labels[index]
+
+def func_chain(x, functions):
+    for function in functions:
+        x = function(x)
+    return x
 
 class ESC50MetaDataset(object):
     def __init__(self, name='ESC50', root='data', 
@@ -61,27 +69,22 @@ class ESC50MetaDataset(object):
         self._device = device
 
         self._total_samples_per_class = (num_samples_per_class + num_val_samples)
-        self._dataloader = self._get_cifar100_data_loader()
+        self._dataloader = self._get_esc50_data_loader()
 
         self.input_size = (img_channel, img_side_len, img_side_len)
         self.output_size = self._num_classes_per_batch
 
     def _get_esc50_data_loader(self):
         assert self._img_channel == 1 or self._img_channel == 3
-        to_imgae = transforms.ToPILImage()
-        resize = transforms.Resize(self._img_side_len, Image.LANCZOS)
-        if self._img_channel == 1:
-            img_transform = transforms.Compose(
-                [to_imgae, resize, 
-                 transforms.Grayscale(num_output_channels=1),
-                 transforms.ToTensor()])
-        else:
-            img_transform = transforms.Compose(
-                [to_imgae, resize, transforms.ToTensor()])
-        dset = ESC50MAMLSplit(self._root, transform=img_transform,
+        transforms = functools.partial(func_chain, functions=[
+            torch.FloatTensor,
+            Resample(44_100, 16_000)
+        ])
+        dset = ESC50MAMLSplit(self._root, transform=transforms,
                                  train=self._train, download=True,
                                  num_train_classes=self._num_train_classes)
-        labels = dset._labels.numpy().tolist()
+        # labels = dset._labels.numpy().tolist()
+        labels = dset._labels
         sampler = ClassBalancedSampler(labels, self._num_classes_per_batch,
                                        self._total_samples_per_class,
                                        self._num_total_batches, self._train)
