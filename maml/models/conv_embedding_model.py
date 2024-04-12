@@ -96,6 +96,7 @@ class ConvEmbeddingModel(torch.nn.Module):
             params = OrderedDict(self.named_parameters())
 
         if self._convolutional:
+            # import pdb; pdb.set_trace();
             x = task.x
             if not self._reuse and self._verbose: print('input size: {}'.format(x.size()))
             for layer_name, layer in self.conv.named_children():

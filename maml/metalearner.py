@@ -133,7 +133,7 @@ class MetaLearner(object):
     def adapt(self, train_tasks):
         adapted_params = []
         embeddings_list = []
-
+        # import pdb; pdb.set_trace();
         for task in train_tasks:
             params = self._model.param_dict
             embeddings = None
@@ -151,16 +151,13 @@ class MetaLearner(object):
         measurements = self._pop_measurements()
         return measurements, adapted_params, embeddings_list
 
-    def step(self, adapted_params_list, embeddings_list, val_tasks,
-             is_training):
+    def step(self, adapted_params_list, embeddings_list, val_tasks, is_training):
         for optimizer in self._optimizers:
             optimizer.zero_grad()
         post_update_losses = []
 
-        for adapted_params, embeddings, task in zip(
-                adapted_params_list, embeddings_list, val_tasks):
-            preds = self._model(task, params=adapted_params,
-                                embeddings=embeddings)
+        for adapted_params, embeddings, task in zip(adapted_params_list, embeddings_list, val_tasks):
+            preds = self._model(task, params=adapted_params, embeddings=embeddings)
             loss = self._loss_func(preds, task.y)
             post_update_losses.append(loss)
             self._update_measurements(task, loss, preds)

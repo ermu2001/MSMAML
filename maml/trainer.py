@@ -29,9 +29,8 @@ class Trainer(object):
             if self._meta_dataset.name == 'MultimodalFewShot':
                 accuracies = [[] for i in range(self._meta_dataset.num_dataset)]
 
-        for i, (train_tasks, val_tasks) in enumerate(
-                iter(self._meta_dataset), start=1):
-
+        for i, (train_tasks, val_tasks) in enumerate(iter(self._meta_dataset), start=1):
+            # import pdb; pdb.set_trace();
             # Save model
             if (i % self._save_interval == 0 or i == 1) and is_training:
                 save_name = 'maml_{0}_{1}.pt'.format(self._model_type, i)
@@ -39,18 +38,13 @@ class Trainer(object):
                 with open(save_path, 'wb') as f:
                     torch.save(self._meta_learner.state_dict(), f)
 
-            (pre_train_measurements, adapted_params, embeddings
-                ) = self._meta_learner.adapt(train_tasks)
-            post_val_measurements = self._meta_learner.step(
-                adapted_params, embeddings, val_tasks, is_training)
+            pre_train_measurements, adapted_params, embeddings = self._meta_learner.adapt(train_tasks)
+            post_val_measurements = self._meta_learner.step(adapted_params, embeddings, val_tasks, is_training)
 
             # Tensorboard
             if (i % self._log_interval == 0 or i == 1):
-                pre_val_measurements = self._meta_learner.measure(
-                    tasks=val_tasks, embeddings_list=embeddings)
-                post_train_measurements = self._meta_learner.measure(
-                    tasks=train_tasks, adapted_params_list=adapted_params,
-                    embeddings_list=embeddings)
+                pre_val_measurements = self._meta_learner.measure(tasks=val_tasks, embeddings_list=embeddings)
+                post_train_measurements = self._meta_learner.measure(tasks=train_tasks, adapted_params_list=adapted_params, embeddings_list=embeddings)
 
                 _grads_mean = np.mean(self._meta_learner._grads_mean)
                 self._meta_learner._grads_mean = []

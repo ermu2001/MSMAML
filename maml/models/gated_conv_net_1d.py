@@ -8,7 +8,7 @@ from maml.models.model import Model
 
 def weight_init(module):
     if (isinstance(module, torch.nn.Linear)
-        or isinstance(module, torch.nn.Conv2d)):
+        or isinstance(module, torch.nn.Conv1d)):
         torch.nn.init.xavier_uniform_(module.weight)
         module.bias.data.zero_()
 
@@ -52,7 +52,7 @@ class GatedConv1dModel(Model):
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer1_condition', None),
-                ('layer1_max_pool', torch.nn.MaxPool2d(kernel_size=2,
+                ('layer1_max_pool', torch.nn.MaxPool1d(kernel_size=2,
                                                        stride=2)),
                 ('layer1_relu', torch.nn.ReLU(inplace=True)),
                 ('layer2_conv', torch.nn.Conv1d(self._num_channels,
@@ -64,7 +64,7 @@ class GatedConv1dModel(Model):
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer2_condition', None),
-                ('layer2_max_pool', torch.nn.MaxPool2d(kernel_size=2,
+                ('layer2_max_pool', torch.nn.MaxPool1d(kernel_size=2,
                                                        stride=2)),
                 ('layer2_relu', torch.nn.ReLU(inplace=True)),
                 ('layer3_conv', torch.nn.Conv1d(self._num_channels*2,
@@ -76,7 +76,7 @@ class GatedConv1dModel(Model):
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer3_condition', None),
-                ('layer3_max_pool', torch.nn.MaxPool2d(kernel_size=2,
+                ('layer3_max_pool', torch.nn.MaxPool1d(kernel_size=2,
                                                        stride=2)),
                 ('layer3_relu', torch.nn.ReLU(inplace=True)),
                 ('layer4_conv', torch.nn.Conv1d(self._num_channels*4,
@@ -88,7 +88,7 @@ class GatedConv1dModel(Model):
                                                    affine=self._bn_affine,
                                                    momentum=0.001)),
                 ('layer4_condition', None),
-                ('layer4_max_pool', torch.nn.MaxPool2d(kernel_size=2,
+                ('layer4_max_pool', torch.nn.MaxPool1d(kernel_size=2,
                                                        stride=2)),
                 ('layer4_relu', torch.nn.ReLU(inplace=True)),
             ]))
@@ -185,7 +185,7 @@ class GatedConv1dModel(Model):
                                  running_var=layer.running_var,
                                  training=True)
             elif 'max_pool' in layer_name:
-                x = F.max_pool2d(x, kernel_size=2, stride=2)
+                x = F.max_pool1d(x, kernel_size=2, stride=2)
             elif 'relu' in layer_name:
                 x = F.relu(x)
             elif 'fully_connected' in layer_name:
@@ -195,7 +195,9 @@ class GatedConv1dModel(Model):
             if not self._reuse and self._verbose: print('{}: {}'.format(layer_name, x.size()))
 
         # in maml network the conv maps are average pooled
-        x = x.view(x.size(0), self._num_channels*8, self._features_size)
+        # import pdb; pdb.set_trace();
+        # x = x.view(x.size(0), self._num_channels*8, self._features_size)
+        x = x.view(x.size(0), self._num_channels*8, -1)
         if not self._reuse and self._verbose: print('reshape to: {}'.format(x.size()))
         x = torch.mean(x, dim=2)
         if not self._reuse and self._verbose: print('reduce mean: {}'.format(x.size()))

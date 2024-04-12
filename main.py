@@ -14,12 +14,15 @@ from maml.datasets.aircraft import AircraftMetaDataset
 from maml.datasets.multimodal_few_shot import MultimodalFewShotDataset
 from maml.models.fully_connected import FullyConnectedModel, MultiFullyConnectedModel
 from maml.models.conv_net import ConvModel
+from maml.models.conv_net_1d import ConvModelOneDimensional
+from maml.models.gated_conv_net_1d import GatedConv1dModel
 from maml.models.gated_conv_net import GatedConvModel
 from maml.models.gated_net import GatedNet
 from maml.models.simple_embedding_model import SimpleEmbeddingModel
 from maml.models.lstm_embedding_model import LSTMEmbeddingModel
 from maml.models.gru_embedding_model import GRUEmbeddingModel
 from maml.models.conv_embedding_model import ConvEmbeddingModel
+from maml.models.conv_embedding_1d_model import ConvEmbeddingOneDimensionalModel
 from maml.metalearner import MetaLearner
 from maml.trainer import Trainer
 from maml.utils import optimizer_to_device, get_git_revision_hash
@@ -361,6 +364,22 @@ def main(args):
             img_side_len=dataset.input_size[1],
             use_max_pool=args.use_max_pool,
             verbose=args.verbose)
+    elif args.model_type == 'conv_1d':
+        model = ConvModelOneDimensional(
+            input_channels=dataset.input_size[0],
+            output_size=dataset.output_size,
+            num_channels=args.num_channels,
+            img_side_len=dataset.input_size[1],
+            use_max_pool=args.use_max_pool,
+            verbose=args.verbose)
+    elif args.model_type == 'gated_conv_1d':
+        model = GatedConv1dModel(
+            input_channels=dataset.input_size[0],
+            output_size=dataset.output_size,
+            num_channels=args.num_channels,
+            img_side_len=dataset.input_size[1],
+            use_max_pool=args.use_max_pool,
+            verbose=args.verbose)
     elif args.model_type == 'gatedconv':
         model = GatedConvModel(
             input_channels=dataset.input_size[0],
@@ -425,6 +444,26 @@ def main(args):
              img_size=dataset.input_size,
              verbose=args.verbose)
         embedding_parameters = list(embedding_model.parameters())
+    elif args.embedding_type == 'ConvGRU1d':
+        embedding_model = ConvEmbeddingOneDimensionalModel(
+             input_size=np.prod(dataset.input_size),
+             output_size=dataset.output_size,
+             embedding_dims=args.embedding_dims,
+             hidden_size=args.embedding_hidden_size,
+             num_layers=args.embedding_num_layers,
+             convolutional=args.conv_embedding,
+             num_conv=args.num_conv_embedding_layer,
+             num_channels=args.num_channels,
+             rnn_aggregation=(not args.no_rnn_aggregation),
+             embedding_pooling=args.embedding_pooling,
+             batch_norm=args.conv_embedding_batch_norm,
+             avgpool_after_conv=args.conv_embedding_avgpool_after_conv,
+             linear_before_rnn=args.linear_before_rnn,
+             num_sample_embedding=args.num_sample_embedding,
+             sample_embedding_file=args.sample_embedding_file+'.'+args.sample_embedding_file_type,
+             img_size=dataset.input_size,
+             verbose=args.verbose)
+        embedding_parameters = list(embedding_model.parameters())    
     else:
         raise ValueError('Unrecognized embedding type {}'.format(
             args.embedding_type))
@@ -654,8 +693,11 @@ if __name__ == '__main__':
     # mmaml model: gated conv + convGRU
     if args.mmaml_model is True:
         print('Use MMAML')
-        args.model_type = 'gatedconv'
-        args.embedding_type = 'ConvGRU'
+        # args.model_type = 'gatedconv'
+        # args.embedding_type = 'ConvGRU'
+
+        args.model_type = 'gated_conv_1d'
+        args.embedding_type = 'ConvGRU1d'
 
     # maml model: conv
     if args.maml_model is True:

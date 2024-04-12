@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 
-class ConvEmbeddingModel(torch.nn.Module):
+class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
     def __init__(self, input_size, output_size, embedding_dims,
                  hidden_size=128, num_layers=1,
                  convolutional=False, num_conv=4, num_channels=32, num_channels_max=256,
@@ -13,7 +13,7 @@ class ConvEmbeddingModel(torch.nn.Module):
                  num_sample_embedding=0, sample_embedding_file='embedding.hdf5',
                  img_size=(1, 28, 28), verbose=False):
 
-        super(ConvEmbeddingModel, self).__init__()
+        super(ConvEmbeddingOneDimensionalModel, self).__init__()
         self._input_size = input_size
         self._output_size = output_size
         self._hidden_size = hidden_size
@@ -44,12 +44,9 @@ class ConvEmbeddingModel(torch.nn.Module):
             for i in range(self._num_conv):
                 conv_list.update({
                     'conv{}'.format(i+1): 
-                        torch.nn.Conv1d(num_ch[i], num_ch[i+1], 
-                                        (3, 3), stride=2, padding=1)})
+                        torch.nn.Conv1d(num_ch[i], num_ch[i+1], 3, stride=2, padding=1)})
                 if self._batch_norm:
-                    conv_list.update({
-                        'bn{}'.format(i+1): 
-                            torch.nn.BatchNorm1d(num_ch[i+1], momentum=0.001)})
+                    conv_list.update({'bn{}'.format(i+1): torch.nn.BatchNorm1d(num_ch[i+1], momentum=0.001)})
                 conv_list.update({'relu{}'.format(i+1): torch.nn.ReLU(inplace=True)})
             self.conv = torch.nn.Sequential(conv_list)
             self._num_layer_per_conv = len(conv_list) // self._num_conv
@@ -95,7 +92,7 @@ class ConvEmbeddingModel(torch.nn.Module):
         if not self._reuse and self._verbose: print('='*8 + ' Emb Model ' + '='*8)
         if params is None:
             params = OrderedDict(self.named_parameters())
-
+        # import pdb; pdb.set_trace();
         if self._convolutional:
             x = task.x
             if not self._reuse and self._verbose: print('input size: {}'.format(x.size()))
@@ -103,7 +100,7 @@ class ConvEmbeddingModel(torch.nn.Module):
                 weight = params.get('conv.' + layer_name + '.weight', None)
                 bias = params.get('conv.' + layer_name + '.bias', None)
                 if 'conv' in layer_name:
-                    x = F.conv2d(x, weight=weight, bias=bias, stride=2, padding=1)
+                    x = F.conv1d(x, weight=weight, bias=bias, stride=2, padding=1)
                 elif 'relu' in layer_name:
                     x = F.relu(x)
                 elif 'bn' in layer_name:
@@ -179,4 +176,4 @@ class ConvEmbeddingModel(torch.nn.Module):
 
     def to(self, device, **kwargs):
         self._device = device
-        super(ConvEmbeddingModel, self).to(device, **kwargs)
+        super(ConvEmbeddingOneDimensionalModel, self).to(device, **kwargs)
