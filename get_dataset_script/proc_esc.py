@@ -60,8 +60,6 @@ file = {
   "val": fvl, 
   "test": fts}
 
-import pdb; pdb.set_trace()
-
 torch.save({'data': data, 'label': labels, 'file': file}, './data/esc50.pth')
 
 # rs = np.random.RandomState(123)
