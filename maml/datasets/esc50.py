@@ -34,6 +34,8 @@ class ESC50MAMLSplit():
         else:
             self._audios = self._dataset['data']['test']
             self._labels = self._dataset['label']['test']
+            # self._audios = torch.FloatTensor(self._dataset['data']['test'])
+            # self._labels = torch.LongTensor(self._dataset['label']['test'])
 
     def __getitem__(self, index):
         audio = self._audios[index]
