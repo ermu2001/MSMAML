@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from maml.models.model import Model
@@ -40,13 +41,13 @@ class GatedConv1dModel(Model):
         assert isinstance(kernel_size, int)
 
         # TODO: plz do refactor this code here...
+        import pdb; pdb.set_trace();
         if self._use_max_pool:
             # TODO: might be bug here, not tested
-            self._conv_stride = 9
-            self._features_size = 1
-            self._kernel_size = 13
-            self._pooling_kernel_size = 4
+            self._conv_stride = 1
             self._dialation = 5
+            self._features_size = 1
+            self._pooling_kernel_size = 5
             # self._padding = "same" # not for strided conv
             self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2 # this ensures the output to be devided by stride
             
@@ -105,7 +106,7 @@ class GatedConv1dModel(Model):
                 ('layer4_relu', torch.nn.ReLU(inplace=True)),
             ]))
         else:
-            self._conv_stride = 1
+            self._conv_stride = 5
             self._features_size = 1
             self._kernel_size = 13
             self._dialation = 5
@@ -196,21 +197,24 @@ class GatedConv1dModel(Model):
             weight = params.get('features.' + layer_name + '.weight', None)
             bias = params.get('features.' + layer_name + '.bias', None)
             if 'conv' in layer_name:
+                layer: nn.Conv1d
                 x = F.conv1d(x, 
                              weight=weight,
                              bias=bias,
-                             stride=self._conv_stride,
-                             padding=self._padding,
-                             dilation=self._dialation)
+                             stride=layer.stride,
+                             padding=layer.padding,
+                             dilation=layer.dilation,)
             elif 'condition' in layer_name:
                 x = self.conditional_layer(x, embeddings[layer_name]) if embeddings is not None else x
             elif 'bn' in layer_name:
+                layer: nn.BatchNorm1d
                 x = F.batch_norm(x, weight=weight, bias=bias,
                                  running_mean=layer.running_mean,
                                  running_var=layer.running_var,
-                                 training=True)
+                                 training=True,)
             elif 'max_pool' in layer_name:
-                x = F.max_pool1d(x, kernel_size=2, stride=2)
+                layer: nn.MaxPool1d
+                x = F.max_pool1d(x, kernel_size=layer.kernel_size, stride=layer.stride)
             elif 'relu' in layer_name:
                 x = F.relu(x)
             elif 'fully_connected' in layer_name:

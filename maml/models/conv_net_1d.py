@@ -96,9 +96,7 @@ class ConvModelOneDimensional(Model):
             ]))
         else:
             self._conv_stride = 4
-            self._features_size = 1
             self._dialation = 3
-            self._pooling_size = 4
             self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2
             self._features_size = (img_side_len // 14)**2
             self.features = torch.nn.Sequential(OrderedDict([
@@ -158,14 +156,16 @@ class ConvModelOneDimensional(Model):
             weight = params.get('features.' + layer_name + '.weight', None)
             bias = params.get('features.' + layer_name + '.bias', None)
             if 'conv' in layer_name:
+                layer: nn.Conv1d
                 x = F.conv1d(x, 
                              weight=weight,
                              bias=bias,
-                             stride=self._conv_stride,
-                             padding=self._padding,
+                             stride=layer.stride,
+                             padding=layer.padding,
                              dilation=layer.dilation)
 
             elif 'bn' in layer_name:
+                layer: nn.BatchNorm1d
                 x = F.batch_norm(x, 
                                  weight=weight,
                                  bias=bias,
@@ -173,7 +173,8 @@ class ConvModelOneDimensional(Model):
                                  running_var=layer.running_var,
                                  training=True)
             elif 'max_pool' in layer_name:
-                x = F.max_pool1d(x, kernel_size=3, stride=3)
+                layer: nn.MaxPool1d
+                x = F.max_pool1d(x, kernel_size=layer.kernel_size, stride=layer.stride)
             elif 'relu' in layer_name:
                 x = F.relu(x)
             elif 'fully_connected' in layer_name:
