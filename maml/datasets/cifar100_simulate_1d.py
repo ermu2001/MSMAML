@@ -22,7 +22,7 @@ class Cifar100MAMLSplit():
 
         self._train = train
         self._num_train_classes = num_train_classes
-
+        self._img_channel = kwargs.pop('img_channel', 1)
         self._dataset = torch.load(self.root)
         if self._train:
             self._images = torch.FloatTensor(self._dataset['data']['train'].reshape([-1, 3, 32, 32]))
@@ -36,7 +36,7 @@ class Cifar100MAMLSplit():
 
         if self.transform:
             image = self.transform(self._images[index])
-        return image.view(1, -1), self._labels[index]
+        return image.view(self._img_channel, -1), self._labels[index]
 
 class Cifar100MetaDataset(object):
     def __init__(self, name='CIFAR1001d', root='data', 
@@ -75,11 +75,11 @@ class Cifar100MetaDataset(object):
                  transforms.Grayscale(num_output_channels=1),
                  transforms.ToTensor()])
         else:
-            img_transform = transforms.Compose(
-                [to_imgae, resize, transforms.ToTensor()])
+            img_transform = transforms.Compose([to_imgae, resize, transforms.ToTensor()])
         dset = Cifar100MAMLSplit(self._root, transform=img_transform,
                                  train=self._train, download=True,
-                                 num_train_classes=self._num_train_classes)
+                                 num_train_classes=self._num_train_classes,
+                                 img_channel=self._img_channel)
         labels = dset._labels.numpy().tolist()
         sampler = ClassBalancedSampler(labels, self._num_classes_per_batch,
                                        self._total_samples_per_class,
@@ -89,7 +89,7 @@ class Cifar100MetaDataset(object):
                       * self._total_samples_per_class
                       * self._meta_batch_size)
         loader = DataLoader(dset, batch_size=batch_size, sampler=sampler,
-                            num_workers=0, pin_memory=True)
+                            num_workers=self._num_workers, pin_memory=True)
         return loader
 
     def _make_single_batch(self, imgs, labels):

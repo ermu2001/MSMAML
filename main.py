@@ -224,7 +224,8 @@ def main(args):
     elif args.dataset == 'cifar':
         dataset = Cifar100MetaDataset(
             root='data',
-            img_side_len=32,
+            img_side_len=args.common_img_side_len,
+            img_channel=args.common_img_channel,
             num_classes_per_batch=args.num_classes_per_batch,
             num_samples_per_class=args.num_samples_per_class,
             num_total_batches=args.num_batches,
