@@ -53,8 +53,7 @@ class MetaLearner(object):
         self._count_iters += 1.0
         self._cum_loss += loss.data.cpu().numpy()
         if self._collect_accuracies:
-            self._cum_accuracy += accuracy(
-                preds, task.y).data.cpu().numpy()
+            self._cum_accuracy += accuracy(preds, task.y).data.cpu().numpy()
 
     def _pop_measurements(self):
         measurements = {}

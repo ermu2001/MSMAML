@@ -32,19 +32,16 @@ class ClassBalancedSampler(Sampler):
     def __iter__(self):
         for i in range(self._num_total_batches):
             if len(self._class_to_samples.keys()) >= self._num_classes_per_batch:
-                batch_classes = random.sample(
-                    self._class_to_samples.keys(), self._num_classes_per_batch)
+                batch_classes = random.sample(self._class_to_samples.keys(), self._num_classes_per_batch)
             else:
-                batch_classes = [random.choice(list(self._class_to_samples.keys())) 
-                                 for _ in range(self._num_classes_per_batch)]
+                batch_classes = [random.choice(list(self._class_to_samples.keys())) for _ in range(self._num_classes_per_batch)]
             batch_samples = []
             for c in batch_classes:
                 if len(self._class_to_samples[c]) >= self._num_samples_per_class:
                     class_samples = random.sample(
                         self._class_to_samples[c], self._num_samples_per_class)
                 else:
-                    class_samples = [random.choice(list(self._class_to_samples[c])) 
-                                     for _ in range(self._num_samples_per_class)]
+                    class_samples = [random.choice(list(self._class_to_samples[c])) for _ in range(self._num_samples_per_class)]
 
                 for sample in class_samples:
                     batch_samples.append(sample)

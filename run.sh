@@ -1,13 +1,14 @@
 CUDA_VISIBLE_DEVICES=0
 python3 main.py \
     --dataset esc50 \
-    --num-batches 60000 \
+    --num-batches 6000 \
     --output-folder mmaml_5mode_5w1s \
-    --verbose true\
     --model-type gated_conv_1d \
     --embedding-type ConvGRU1d \
-    --num-workers 16 \
+    --num-workers 0 \
     --eval \
+    --verbose \
+    --checkpoint tmp/train_dir_0412/mmaml_5mode_5w1s/maml_gated_conv_1d_6000.pt \
     # --mmaml-model True \
 
 

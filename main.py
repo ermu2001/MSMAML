@@ -29,6 +29,153 @@ from maml.trainer import Trainer
 from maml.utils import optimizer_to_device, get_git_revision_hash
 
 
+def parse_args(arg_list=[]):
+    parser = argparse.ArgumentParser(
+        description='Model-Agnostic Meta-Learning (MAML)')
+
+    parser.add_argument('--mmaml-model', action='store_true', help='gated_conv + ConvGRU')
+    parser.add_argument('--maml-model', action='store_true', help='conv')
+
+    # Model
+    parser.add_argument('--hidden-sizes', type=int,
+        default=[256, 128, 64, 64], nargs='+',
+        help='number of hidden units per layer')
+    parser.add_argument('--model-type', type=str, default='gatedconv',
+        help='type of the model')
+    parser.add_argument('--condition-type', type=str, default='affine',
+        choices=['affine', 'sigmoid', 'softmax'],
+        help='type of the conditional layers')
+    parser.add_argument('--condition-order', type=str, default='low2high',
+        help='order of the conditional layers to be used')
+    parser.add_argument('--use-max-pool', action='store_true', help='choose whether to use max pooling with convolutional model')
+    parser.add_argument('--num-channels', type=int, default=32,
+        help='number of channels in convolutional layers')
+    parser.add_argument('--disable-norm', action='store_true',
+        help='disable batchnorm after linear layers in a fully connected model')
+    parser.add_argument('--bias-transformation-size', type=int, default=0,
+        help='size of bias transformation vector that is concatenated with '
+             'input')
+
+    # Embedding
+    parser.add_argument('--embedding-type', type=str, default='',
+        help='type of the embedding')
+    parser.add_argument('--embedding-hidden-size', type=int, default=128,
+        help='number of hidden units per layer in recurrent embedding model')
+    parser.add_argument('--embedding-num-layers', type=int, default=2,
+        help='number of layers in recurrent embedding model')
+    parser.add_argument('--embedding-dims', type=int, nargs='+', default=0,
+        help='dimensions of the embeddings')
+
+    # Randomly sampled embedding vectors
+    parser.add_argument('--num-sample-embedding', type=int, default=0,
+        help='number of randomly sampled embedding vectors')
+    parser.add_argument(
+        '--sample-embedding-file', type=str, default='embeddings',
+        help='the file name of randomly sampled embedding vectors')
+    parser.add_argument(
+        '--sample-embedding-file-type', type=str, default='hdf5')
+
+    # Inner loop
+    parser.add_argument('--first-order', action='store_true',
+        help='use the first-order approximation of MAML')
+    parser.add_argument('--fast-lr', type=float, default=0.05,
+        help='learning rate for the 1-step gradient update of MAML')
+    parser.add_argument('--inner-loop-grad-clip', type=float, default=20.0,
+        help='enable gradient clipping in the inner loop')
+    parser.add_argument('--num-updates', type=int, default=5,
+        help='how many update steps in the inner loop')
+
+    # Optimization
+    parser.add_argument('--num-batches', type=int, default=1920000,
+        help='number of batches')
+    parser.add_argument('--meta-batch-size', type=int, default=10,
+        help='number of tasks per batch')
+    parser.add_argument('--slow-lr', type=float, default=0.001,
+        help='learning rate for the global update of MAML')
+
+    # Miscellaneous
+    parser.add_argument('--output-folder', type=str, default='maml',
+        help='name of the output folder')
+    parser.add_argument('--device', type=str, default='cuda',
+        help='set the device (cpu or cuda)')
+    parser.add_argument('--num-workers', type=int, default=4,
+        help='how many DataLoader workers to use')
+    parser.add_argument('--log-interval', type=int, default=100,
+        help='number of batches between tensorboard writes')
+    parser.add_argument('--save-interval', type=int, default=1000,
+        help='number of batches between model saves')
+    parser.add_argument('--eval', action='store_true', default=False,
+        help='evaluate model')
+    parser.add_argument('--checkpoint', type=str, default='',
+        help='path to saved parameters.')
+
+    # Dataset
+    parser.add_argument('--dataset', type=str, default='multimodal_few_shot',
+        help='which dataset to use')
+    parser.add_argument('--data-root', type=str, default='data',
+        help='path to store datasets')
+    parser.add_argument('--num-train-classes', type=int, default=1100,
+        help='how many classes for training')
+    parser.add_argument('--num-classes-per-batch', type=int, default=5,
+        help='how many classes per task')
+    parser.add_argument('--num-samples-per-class', type=int, default=1,
+        help='how many samples per class for training')
+    parser.add_argument('--num-val-samples', type=int, default=15,
+        help='how many samples per class for validation')
+    parser.add_argument('--img-side-len', type=int, default=28,
+        help='width and height of the input images')
+    parser.add_argument('--input-range', type=float, default=[-5.0, 5.0],
+        nargs='+', help='input range of simple functions')
+    parser.add_argument('--phase-range', type=float, default=[0, np.pi],
+        nargs='+', help='phase range of sinusoids')
+    parser.add_argument('--amp-range', type=float, default=[0.1, 5.0],
+        nargs='+', help='amp range of sinusoids')
+    parser.add_argument('--slope-range', type=float, default=[-3.0, 3.0],
+        nargs='+', help='slope range of linear functions')
+    parser.add_argument('--intersect-range', type=float, default=[-3.0, 3.0],
+        nargs='+', help='intersect range of linear functions')
+    parser.add_argument('--noise-std', type=float, default=0.0,
+        help='add gaussian noise to mixed functions')
+    parser.add_argument('--oracle', action='store_true',
+        help='concatenate phase and amp to sinusoid inputs')
+    parser.add_argument('--task-oracle', action='store_true',
+        help='uses task id for prediction in some models')
+
+    # Combine few-shot learning datasets
+    parser.add_argument('--multimodal_few_shot', type=str,
+        default=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist'], 
+        choices=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist',
+                 'bird', 'aircraft'], 
+        nargs='+')
+    parser.add_argument('--common-img-side-len', type=int, default=84)
+    parser.add_argument('--common-img-channel', type=int, default=3,
+                        help='3 for RGB and 1 for grayscale')
+    parser.add_argument('--mix-meta-batch', action='store_false', default=True)
+    parser.add_argument('--mix-mini-batch', action='store_true', default=False)
+
+    parser.add_argument('--alternating', action='store_true',
+        help='')
+    parser.add_argument('--classifier-schedule', type=int, default=10,
+        help='')
+    parser.add_argument('--embedding-schedule', type=int, default=10,
+        help='')
+    parser.add_argument('--conv-embedding', action='store_false', help='')
+    parser.add_argument('--conv-embedding-batch-norm', action='store_false', default=True, help='')
+    parser.add_argument('--conv-embedding-avgpool-after-conv', action='store_false',
+        help='')
+    parser.add_argument('--num-conv-embedding-layer', type=int, default=4, help='')
+    parser.add_argument('--no-rnn-aggregation', action='store_false', help='')
+    parser.add_argument('--embedding-pooling', type=str,
+        choices=['avg', 'max'], default='avg', help='')
+    parser.add_argument('--linear-before-rnn', action='store_true',
+        help='')
+    parser.add_argument('--embedding-grad-clip', type=float, default=0.0,
+        help='')
+    parser.add_argument('--verbose', action='store_true', help='')
+
+    args = parser.parse_args(arg_list)
+    return args
+
 def main(args):
     is_training = not args.eval
     run_name = 'train' if is_training else 'eval'
@@ -516,7 +663,7 @@ def main(args):
         collect_accuracies=collect_accuracies, device=args.device,
         alternating=args.alternating, embedding_schedule=args.embedding_schedule,
         classifier_schedule=args.classifier_schedule, embedding_grad_clip=args.embedding_grad_clip)
-
+    
     trainer = Trainer(
         meta_learner=meta_learner, meta_dataset=dataset, writer=writer,
         log_interval=args.log_interval, save_interval=args.save_interval,
@@ -532,161 +679,7 @@ def main(args):
 
 if __name__ == '__main__':
 
-    def str2bool(arg):
-        return arg.lower() == 'true'
-
-    parser = argparse.ArgumentParser(
-        description='Model-Agnostic Meta-Learning (MAML)')
-
-    parser.add_argument('--mmaml-model', type=str2bool, default=False,
-        help='gated_conv + ConvGRU')
-    parser.add_argument('--maml-model', type=str2bool, default=False,
-        help='conv')
-
-    # Model
-    parser.add_argument('--hidden-sizes', type=int,
-        default=[256, 128, 64, 64], nargs='+',
-        help='number of hidden units per layer')
-    parser.add_argument('--model-type', type=str, default='gatedconv',
-        help='type of the model')
-    parser.add_argument('--condition-type', type=str, default='affine',
-        choices=['affine', 'sigmoid', 'softmax'],
-        help='type of the conditional layers')
-    parser.add_argument('--condition-order', type=str, default='low2high',
-        help='order of the conditional layers to be used')
-    parser.add_argument('--use-max-pool', type=str2bool, default=False,
-        help='choose whether to use max pooling with convolutional model')
-    parser.add_argument('--num-channels', type=int, default=32,
-        help='number of channels in convolutional layers')
-    parser.add_argument('--disable-norm', action='store_true',
-        help='disable batchnorm after linear layers in a fully connected model')
-    parser.add_argument('--bias-transformation-size', type=int, default=0,
-        help='size of bias transformation vector that is concatenated with '
-             'input')
-
-    # Embedding
-    parser.add_argument('--embedding-type', type=str, default='',
-        help='type of the embedding')
-    parser.add_argument('--embedding-hidden-size', type=int, default=128,
-        help='number of hidden units per layer in recurrent embedding model')
-    parser.add_argument('--embedding-num-layers', type=int, default=2,
-        help='number of layers in recurrent embedding model')
-    parser.add_argument('--embedding-dims', type=int, nargs='+', default=0,
-        help='dimensions of the embeddings')
-
-    # Randomly sampled embedding vectors
-    parser.add_argument('--num-sample-embedding', type=int, default=0,
-        help='number of randomly sampled embedding vectors')
-    parser.add_argument(
-        '--sample-embedding-file', type=str, default='embeddings',
-        help='the file name of randomly sampled embedding vectors')
-    parser.add_argument(
-        '--sample-embedding-file-type', type=str, default='hdf5')
-
-    # Inner loop
-    parser.add_argument('--first-order', action='store_true',
-        help='use the first-order approximation of MAML')
-    parser.add_argument('--fast-lr', type=float, default=0.05,
-        help='learning rate for the 1-step gradient update of MAML')
-    parser.add_argument('--inner-loop-grad-clip', type=float, default=20.0,
-        help='enable gradient clipping in the inner loop')
-    parser.add_argument('--num-updates', type=int, default=5,
-        help='how many update steps in the inner loop')
-
-    # Optimization
-    parser.add_argument('--num-batches', type=int, default=1920000,
-        help='number of batches')
-    parser.add_argument('--meta-batch-size', type=int, default=10,
-        help='number of tasks per batch')
-    parser.add_argument('--slow-lr', type=float, default=0.001,
-        help='learning rate for the global update of MAML')
-
-    # Miscellaneous
-    parser.add_argument('--output-folder', type=str, default='maml',
-        help='name of the output folder')
-    parser.add_argument('--device', type=str, default='cuda',
-        help='set the device (cpu or cuda)')
-    parser.add_argument('--num-workers', type=int, default=4,
-        help='how many DataLoader workers to use')
-    parser.add_argument('--log-interval', type=int, default=100,
-        help='number of batches between tensorboard writes')
-    parser.add_argument('--save-interval', type=int, default=1000,
-        help='number of batches between model saves')
-    parser.add_argument('--eval', action='store_true', default=False,
-        help='evaluate model')
-    parser.add_argument('--checkpoint', type=str, default='',
-        help='path to saved parameters.')
-
-    # Dataset
-    parser.add_argument('--dataset', type=str, default='multimodal_few_shot',
-        help='which dataset to use')
-    parser.add_argument('--data-root', type=str, default='data',
-        help='path to store datasets')
-    parser.add_argument('--num-train-classes', type=int, default=1100,
-        help='how many classes for training')
-    parser.add_argument('--num-classes-per-batch', type=int, default=5,
-        help='how many classes per task')
-    parser.add_argument('--num-samples-per-class', type=int, default=1,
-        help='how many samples per class for training')
-    parser.add_argument('--num-val-samples', type=int, default=15,
-        help='how many samples per class for validation')
-    parser.add_argument('--img-side-len', type=int, default=28,
-        help='width and height of the input images')
-    parser.add_argument('--input-range', type=float, default=[-5.0, 5.0],
-        nargs='+', help='input range of simple functions')
-    parser.add_argument('--phase-range', type=float, default=[0, np.pi],
-        nargs='+', help='phase range of sinusoids')
-    parser.add_argument('--amp-range', type=float, default=[0.1, 5.0],
-        nargs='+', help='amp range of sinusoids')
-    parser.add_argument('--slope-range', type=float, default=[-3.0, 3.0],
-        nargs='+', help='slope range of linear functions')
-    parser.add_argument('--intersect-range', type=float, default=[-3.0, 3.0],
-        nargs='+', help='intersect range of linear functions')
-    parser.add_argument('--noise-std', type=float, default=0.0,
-        help='add gaussian noise to mixed functions')
-    parser.add_argument('--oracle', action='store_true',
-        help='concatenate phase and amp to sinusoid inputs')
-    parser.add_argument('--task-oracle', action='store_true',
-        help='uses task id for prediction in some models')
-
-    # Combine few-shot learning datasets
-    parser.add_argument('--multimodal_few_shot', type=str,
-        default=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist'], 
-        choices=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist',
-                 'bird', 'aircraft'], 
-        nargs='+')
-    parser.add_argument('--common-img-side-len', type=int, default=84)
-    parser.add_argument('--common-img-channel', type=int, default=3,
-                        help='3 for RGB and 1 for grayscale')
-    parser.add_argument('--mix-meta-batch', type=str2bool, default=True)
-    parser.add_argument('--mix-mini-batch', type=str2bool, default=False)
-
-    parser.add_argument('--alternating', action='store_true',
-        help='')
-    parser.add_argument('--classifier-schedule', type=int, default=10,
-        help='')
-    parser.add_argument('--embedding-schedule', type=int, default=10,
-        help='')
-    parser.add_argument('--conv-embedding', type=str2bool, default=True,
-        help='')
-    parser.add_argument('--conv-embedding-batch-norm', type=str2bool, default=True,
-        help='')
-    parser.add_argument('--conv-embedding-avgpool-after-conv', type=str2bool, default=True,
-        help='')
-    parser.add_argument('--num-conv-embedding-layer', type=int, default=4,
-        help='')
-    parser.add_argument('--no-rnn-aggregation', type=str2bool, default=True,
-        help='')
-    parser.add_argument('--embedding-pooling', type=str,
-        choices=['avg', 'max'], default='avg', help='')
-    parser.add_argument('--linear-before-rnn', action='store_true',
-        help='')
-    parser.add_argument('--embedding-grad-clip', type=float, default=0.0,
-        help='')
-    parser.add_argument('--verbose', type=str2bool, default=False,
-        help='')
-
-    args = parser.parse_args()
+    args = parse_args()
 
     # Create logs and saves folder if they don't exist
     if not os.path.exists('./train_dir'):

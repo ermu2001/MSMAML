@@ -37,14 +37,13 @@ class Trainer(object):
                 save_path = os.path.join(self._save_folder, save_name)
                 with open(save_path, 'wb') as f:
                     torch.save(self._meta_learner.state_dict(), f)
-
-            pre_train_measurements, adapted_params, embeddings = self._meta_learner.adapt(train_tasks)
-            post_val_measurements = self._meta_learner.step(adapted_params, embeddings, val_tasks, is_training)
+            pre_train_measurements, adapted_params, embeddings = self._meta_learner.adapt(train_tasks) # train_tasks measurements before meta updates
+            post_val_measurements = self._meta_learner.step(adapted_params, embeddings, val_tasks, is_training) # val_tasks measurements after meta updates
 
             # Tensorboard
             if (i % self._log_interval == 0 or i == 1):
-                pre_val_measurements = self._meta_learner.measure(tasks=val_tasks, embeddings_list=embeddings)
-                post_train_measurements = self._meta_learner.measure(tasks=train_tasks, adapted_params_list=adapted_params, embeddings_list=embeddings)
+                pre_val_measurements = self._meta_learner.measure(tasks=val_tasks, embeddings_list=embeddings) # val_tasks measurements after sgd updates
+                post_train_measurements = self._meta_learner.measure(tasks=train_tasks, adapted_params_list=adapted_params, embeddings_list=embeddings) # train_tasks measurements after meta updates
 
                 _grads_mean = np.mean(self._meta_learner._grads_mean)
                 self._meta_learner._grads_mean = []
