@@ -29,9 +29,8 @@ from maml.trainer import Trainer
 from maml.utils import optimizer_to_device, get_git_revision_hash
 
 
-def parse_args(arg_list=[]):
-    parser = argparse.ArgumentParser(
-        description='Model-Agnostic Meta-Learning (MAML)')
+def parse_args(arg_list=None):
+    parser = argparse.ArgumentParser(description='Model-Agnostic Meta-Learning (MAML)')
 
     parser.add_argument('--mmaml-model', action='store_true', help='gated_conv + ConvGRU')
     parser.add_argument('--maml-model', action='store_true', help='conv')
@@ -172,8 +171,10 @@ def parse_args(arg_list=[]):
     parser.add_argument('--embedding-grad-clip', type=float, default=0.0,
         help='')
     parser.add_argument('--verbose', action='store_true', help='')
-
-    args = parser.parse_args(arg_list)
+    if arg_list is None:
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(arg_list)
     return args
 
 def main(args):
