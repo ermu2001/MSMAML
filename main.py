@@ -11,6 +11,7 @@ from maml.datasets.miniimagenet import MiniimagenetMetaDataset
 from maml.datasets.cifar100_simulate_1d import Cifar100MetaDataset
 # from maml.datasets.cifar100 import Cifar100MetaDataset
 from maml.datasets.esc50 import ESC50MetaDataset
+from maml.datasets.mnist import MNISTMetaDataset
 from maml.datasets.bird import BirdMetaDataset
 from maml.datasets.aircraft import AircraftMetaDataset
 from maml.datasets.multimodal_few_shot import MultimodalFewShotDataset
@@ -145,7 +146,7 @@ def parse_args(arg_list=None):
     parser.add_argument('--multimodal_few_shot', type=str,
         default=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist'], 
         choices=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist',
-                 'bird', 'aircraft', 'esc50'], 
+                 'bird', 'aircraft', 'esc50', 'mnist'], 
         nargs='+')
     parser.add_argument('--common-img-side-len', type=int, default=84)
     parser.add_argument('--common-img-channel', type=int, default=3,
@@ -356,6 +357,21 @@ def main(args):
                 num_train_classes=args.num_train_classes,
                 num_workers=args.num_workers,
                 device=args.device)
+            )     
+        if 'mnist' in args.multimodal_few_shot:
+            dataset_list.append( MNISTMetaDataset(
+                root='data',
+                img_side_len=28,
+                img_channel=1,
+                num_classes_per_batch=args.num_classes_per_batch,
+                num_samples_per_class=args.num_samples_per_class,
+                num_total_batches=args.num_batches,
+                num_val_samples=args.num_val_samples,
+                meta_batch_size=args.meta_batch_size,
+                train=is_training,
+                num_train_classes=args.num_train_classes,
+                num_workers=args.num_workers,
+                device=args.device)
             )           
         assert len(dataset_list) > 0
         print('Multimodal Few Shot Datasets: {}'.format(
@@ -504,6 +520,22 @@ def main(args):
             root='data',
             audio_side_len=32,
             audio_channel=1,
+            num_classes_per_batch=args.num_classes_per_batch,
+            num_samples_per_class=args.num_samples_per_class,
+            num_total_batches=args.num_batches,
+            num_val_samples=args.num_val_samples,
+            meta_batch_size=args.meta_batch_size,
+            train=is_training,
+            num_train_classes=args.num_train_classes,
+            num_workers=args.num_workers,
+            device=args.device)
+        loss_func = torch.nn.CrossEntropyLoss()
+        collect_accuracies = True
+    elif args.dataset == 'mnist':
+        dataset = MNISTMetaDataset(
+            root='data',
+            img_side_len=28,
+            img_channel=1,
             num_classes_per_batch=args.num_classes_per_batch,
             num_samples_per_class=args.num_samples_per_class,
             num_total_batches=args.num_batches,

@@ -1,7 +1,7 @@
 # CUDA_VISIBLE_DEVICES=0,1,2
 python3 main.py \
     --dataset esc50 \
-    --num-batches 6000 \
+    --num-batches 60000 \
     --output-folder mmaml_1modea_5w1s \
     --model-type gated_conv_1d \
     --embedding-type ConvGRU1d \
@@ -16,7 +16,7 @@ python3 main.py \
 
 python3 main.py \
     --dataset esc50 \
-    --num-batches 6000 \
+    --num-batches 60000 \
     --output-folder mmaml_1modea_5w5s \
     --model-type gated_conv_1d \
     --embedding-type ConvGRU1d \
