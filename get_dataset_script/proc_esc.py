@@ -32,8 +32,6 @@ for row in tqdm(meta_df.itertuples(index=True, name='Pandas'), total=len(meta_df
     file.append(row[1])
     classmap[int(row[3])] = row[4]
     
-classmap = sorted(classmap.items())
-    
 tr_split = int(num_sample * ptr)
 vl_split = int(num_sample * (ptr + pvl))
 

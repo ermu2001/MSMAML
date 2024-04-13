@@ -36,6 +36,7 @@ class ESC50MAMLSplit():
             self._labels = self._dataset['label']['test']
             # self._audios = torch.FloatTensor(self._dataset['data']['test'])
             # self._labels = torch.LongTensor(self._dataset['label']['test'])
+        self.classname = self._dataset['class']
 
     def __getitem__(self, index):
         audio = self._audios[index]
@@ -69,7 +70,7 @@ class ESC50MetaDataset(object):
         self._train = train
         self._num_workers = num_workers
         self._device = device
-
+        self.classname = {}
         self._total_samples_per_class = (num_samples_per_class + num_val_samples)
         self._dataloader = self._get_esc50_data_loader()
 
@@ -85,6 +86,7 @@ class ESC50MetaDataset(object):
         dset = ESC50MAMLSplit(self._root, transform=transforms,
                                  train=self._train, download=True,
                                  num_train_classes=self._num_train_classes)
+        self.classname = dset.classname
         # labels = dset._labels.numpy().tolist()
         labels = dset._labels
         sampler = ClassBalancedSampler(labels, self._num_classes_per_batch,
