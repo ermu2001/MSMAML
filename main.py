@@ -88,7 +88,7 @@ def parse_args(arg_list=None):
     # Optimization
     parser.add_argument('--num-batches', type=int, default=1920000,
         help='number of batches')
-    parser.add_argument('--meta-batch-size', type=int, default=10,
+    parser.add_argument('--meta-batch-size', type=int, default=5,
         help='number of tasks per batch')
     parser.add_argument('--slow-lr', type=float, default=0.001,
         help='learning rate for the global update of MAML')
