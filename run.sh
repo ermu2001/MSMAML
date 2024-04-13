@@ -1,14 +1,17 @@
 CUDA_VISIBLE_DEVICES=0
 python3 main.py \
-    --dataset esc50 \
-    --num-batches 6000 \
-    --output-folder mmaml_5mode_5w1s \
+    --dataset multimodal_few_shot \
+    --common-img-side-len 163 \
+    --multimodal_few_shot esc50 cifar \
+    --num-batches 60000 \
     --model-type gated_conv_1d \
     --embedding-type ConvGRU1d \
-    --num-workers 0 \
-    --eval \
+    --num-workers 16 \
     --verbose \
-    --checkpoint train_dir/mmaml_5mode_5w1s/maml_gated_conv_1d_6000.pt \
+    --output-folder real_multimodal_2mode_5w1s\
+    # --eval \
+    # --output-folder mmaml_5mode_5w1s \
+    # --checkpoint tmp/train_dir_0412/mmaml_5mode_5w1s/maml_gated_conv_1d_6000.pt \
     # --mmaml-model True \
 
 

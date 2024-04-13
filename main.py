@@ -8,7 +8,8 @@ from tensorboardX import SummaryWriter
 
 from maml.datasets.omniglot import OmniglotMetaDataset
 from maml.datasets.miniimagenet import MiniimagenetMetaDataset
-from maml.datasets.cifar100 import Cifar100MetaDataset
+from maml.datasets.cifar100_simulate_1d import Cifar100MetaDataset
+# from maml.datasets.cifar100 import Cifar100MetaDataset
 from maml.datasets.esc50 import ESC50MetaDataset
 from maml.datasets.bird import BirdMetaDataset
 from maml.datasets.aircraft import AircraftMetaDataset
@@ -144,7 +145,7 @@ def parse_args(arg_list=None):
     parser.add_argument('--multimodal_few_shot', type=str,
         default=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist'], 
         choices=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist',
-                 'bird', 'aircraft'], 
+                 'bird', 'aircraft', 'esc50'], 
         nargs='+')
     parser.add_argument('--common-img-side-len', type=int, default=84)
     parser.add_argument('--common-img-channel', type=int, default=3,
@@ -182,10 +183,8 @@ def main(args):
     run_name = 'train' if is_training else 'eval'
 
     if is_training:
-        writer = SummaryWriter('./train_dir/{0}/{1}'.format(
-            args.output_folder, run_name))
-        with open('./train_dir/{}/config.txt'.format(
-            args.output_folder), 'w') as config_txt:
+        writer = SummaryWriter('./train_dir/{0}/{1}'.format(args.output_folder, run_name))
+        with open('./train_dir/{}/config.txt'.format(args.output_folder), 'w') as config_txt:
             for k, v in sorted(vars(args).items()):
                 config_txt.write('{}: {}\n'.format(k, v))
     else:
@@ -333,6 +332,21 @@ def main(args):
                 root='data',
                 img_side_len=args.common_img_side_len,
                 img_channel=args.common_img_channel,
+                num_classes_per_batch=args.num_classes_per_batch,
+                num_samples_per_class=args.num_samples_per_class,
+                num_total_batches=args.num_batches,
+                num_val_samples=args.num_val_samples,
+                meta_batch_size=args.meta_batch_size,
+                train=is_training,
+                num_train_classes=args.num_train_classes,
+                num_workers=args.num_workers,
+                device=args.device)
+            )     
+        if 'esc50' in args.multimodal_few_shot:
+            dataset_list.append( ESC50MetaDataset(
+                root='data',
+                audio_side_len=32,
+                audio_channel=1,
                 num_classes_per_batch=args.num_classes_per_batch,
                 num_samples_per_class=args.num_samples_per_class,
                 num_total_batches=args.num_batches,
@@ -531,7 +545,7 @@ def main(args):
             verbose=args.verbose)
     elif args.model_type == 'conv_1d':
         model = ConvModelOneDimensional(
-            input_channels=dataset.input_size[0],
+            input_channels=1,
             output_size=dataset.output_size,
             num_channels=args.num_channels,
             img_side_len=dataset.input_size[1],
@@ -539,7 +553,7 @@ def main(args):
             verbose=args.verbose)
     elif args.model_type == 'gated_conv_1d':
         model = GatedConv1dModel(
-            input_channels=dataset.input_size[0],
+            input_channels=1,
             output_size=dataset.output_size,
             num_channels=args.num_channels,
             img_side_len=dataset.input_size[1],
@@ -626,7 +640,7 @@ def main(args):
              linear_before_rnn=args.linear_before_rnn,
              num_sample_embedding=args.num_sample_embedding,
              sample_embedding_file=args.sample_embedding_file+'.'+args.sample_embedding_file_type,
-             img_size=dataset.input_size,
+             img_size=[1],
              verbose=args.verbose)
         embedding_parameters = list(embedding_model.parameters())    
     else:

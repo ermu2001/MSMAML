@@ -23,9 +23,9 @@ class MultimodalFewShotDataset(object):
         
         # make sure all input/output sizes match
         input_size_list = [dataset.input_size for dataset in self._datasets]
-        assert input_size_list.count(input_size_list[0]) == len(input_size_list)
+        # assert input_size_list.count(input_size_list[0]) == len(input_size_list)
         output_size_list = [dataset.output_size for dataset in self._datasets]
-        assert output_size_list.count(output_size_list[0]) == len(output_size_list)
+        # assert output_size_list.count(output_size_list[0]) == len(output_size_list)
         self.input_size = datasets[0].input_size
         self.output_size = datasets[0].output_size
 

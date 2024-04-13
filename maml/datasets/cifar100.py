@@ -40,7 +40,7 @@ class Cifar100MAMLSplit():
         return image, self._labels[index]
 
 class Cifar100MetaDataset(object):
-    def __init__(self, name='FC100', root='data', 
+    def __init__(self, name='CIFAR1001d', root='data', 
                  img_side_len=32, img_channel=3,
                  num_classes_per_batch=5, num_samples_per_class=6, 
                  num_total_batches=200000,
