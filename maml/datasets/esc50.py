@@ -51,15 +51,15 @@ def func_chain(x, functions):
 
 class ESC50MetaDataset(object):
     def __init__(self, name='ESC50', root='data', 
-                 img_side_len=32, img_channel=3,
+                 audio_side_len=32, audio_channel=3,
                  num_classes_per_batch=5, num_samples_per_class=6, 
                  num_total_batches=200000,
                  num_val_samples=1, meta_batch_size=32, train=True,
                  num_train_classes=100, num_workers=0, device='cpu'):
         self.name = name
         self._root = root
-        self._img_side_len = img_side_len
-        self._img_channel = img_channel
+        self._audio_side_len = audio_side_len
+        self._audio_channel = audio_channel
         self._num_classes_per_batch = num_classes_per_batch
         self._num_samples_per_class = num_samples_per_class
         self._num_total_batches = num_total_batches
@@ -73,11 +73,11 @@ class ESC50MetaDataset(object):
         self._total_samples_per_class = (num_samples_per_class + num_val_samples)
         self._dataloader = self._get_esc50_data_loader()
 
-        self.input_size = (img_channel, img_side_len, img_side_len)
+        self.input_size = (audio_channel, audio_side_len, audio_side_len)
         self.output_size = self._num_classes_per_batch
 
     def _get_esc50_data_loader(self):
-        assert self._img_channel == 1 or self._img_channel == 3
+        assert self._audio_channel == 1 or self._audio_channel == 3
         transforms = functools.partial(func_chain, functions=[
             torch.FloatTensor,
             Resample(44_100, 16_000)
@@ -98,13 +98,15 @@ class ESC50MetaDataset(object):
                             num_workers=self._num_workers, pin_memory=True)
         return loader
 
-    def _make_single_batch(self, imgs, labels):
-        """Split imgs and labels into train and validation set.
+    def _make_single_batch(self, audios, labels):
+        """Split audios and labels into train and validation set.
         TODO: check if this might become the bottleneck"""
         # relabel classes randomly
         new_labels = list(range(self._num_classes_per_batch))
         random.shuffle(new_labels)
         labels = labels.tolist()
+        gts = labels.copy()
+        gts_tensor = torch.tensor(gts, device=self._device)
         label_set = set(labels)
         label_map = {label: new_labels[i] for i, label in enumerate(label_set)}
         labels = [label_map[l] for l in labels]
@@ -120,20 +122,20 @@ class ESC50MetaDataset(object):
             val_indices.extend(indices[:self._num_val_samples])
             train_indices.extend(indices[self._num_val_samples:])
         label_tensor = torch.tensor(labels, device=self._device)
-        imgs = imgs.to(self._device)
-        train_task = Task(imgs[train_indices], label_tensor[train_indices], self.name)
-        val_task = Task(imgs[val_indices], label_tensor[val_indices], self.name)
+        audios = audios.to(self._device)
+        train_task = Task(audios[train_indices], label_tensor[train_indices], self.name, gts_tensor[train_indices])
+        val_task = Task(audios[val_indices], label_tensor[val_indices], self.name, gts_tensor[val_indices])
 
         return train_task, val_task
 
-    def _make_meta_batch(self, imgs, labels):
+    def _make_meta_batch(self, audios, labels):
         batches = []
         inner_batch_size = (self._total_samples_per_class
                             * self._num_classes_per_batch)
-        for i in range(0, len(imgs) - 1, inner_batch_size):
-            batch_imgs = imgs[i:i+inner_batch_size]
+        for i in range(0, len(audios) - 1, inner_batch_size):
+            batch_audios = audios[i:i+inner_batch_size]
             batch_labels = labels[i:i+inner_batch_size]
-            batch = self._make_single_batch(batch_imgs, batch_labels)
+            batch = self._make_single_batch(batch_audios, batch_labels)
             batches.append(batch)
 
         train_tasks, val_tasks = zip(*batches)
@@ -141,6 +143,6 @@ class ESC50MetaDataset(object):
         return train_tasks, val_tasks
 
     def __iter__(self):
-        for imgs, labels in iter(self._dataloader):
-            train_tasks, val_tasks = self._make_meta_batch(imgs, labels)
+        for audios, labels in iter(self._dataloader):
+            train_tasks, val_tasks = self._make_meta_batch(audios, labels)
             yield train_tasks, val_tasks

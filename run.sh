@@ -8,7 +8,7 @@ python3 main.py \
     --num-workers 0 \
     --eval \
     --verbose \
-    --checkpoint tmp/train_dir_0412/mmaml_5mode_5w1s/maml_gated_conv_1d_6000.pt \
+    --checkpoint train_dir/mmaml_5mode_5w1s/maml_gated_conv_1d_6000.pt \
     # --mmaml-model True \
 
 

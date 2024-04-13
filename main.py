@@ -488,8 +488,8 @@ def main(args):
     elif args.dataset == 'esc50':
         dataset = ESC50MetaDataset(
             root='data',
-            img_side_len=32,
-            img_channel=1,
+            audio_side_len=32,
+            audio_channel=1,
             num_classes_per_batch=args.num_classes_per_batch,
             num_samples_per_class=args.num_samples_per_class,
             num_total_batches=args.num_batches,
