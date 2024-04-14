@@ -9,7 +9,7 @@ class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
 
     _audio_embed_stride = 320
     _image_embed_stride = 2
-    _text_embed_stride = 1
+    _text_embed_stride = 4
 
     _modality2task_names = {
         'audio': ['ESC50'],
