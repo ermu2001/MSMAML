@@ -4,7 +4,7 @@ scikit-image
 tqdm
 Pillow
 numpy
-scipy
+scipy==1.12
 requests
 tensorboardX
 librosa
