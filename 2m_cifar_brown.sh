@@ -1,8 +1,8 @@
-output_folder=brown_5w1s
+output_folder=cifar_brown_2m5w1s
 mkdir train_dir/${output_folder}
 python3 main.py \
     --dataset multimodal_few_shot \
-    --multimodal_few_shot brown \
+    --multimodal_few_shot cifar brown \
     --common-img-side-len 32 \
     --common-img-channel 3 \
     --num-batches 30000 \
@@ -16,13 +16,11 @@ python3 main.py \
     --device cuda:0 \
     --output-folder ${output_folder} > train_dir/${output_folder}/train.log
 
-
-
-output_folder=brown_5w5s
+output_folder=cifar_brown_2m5w5s
 mkdir train_dir/${output_folder}
 python3 main.py \
     --dataset multimodal_few_shot \
-    --multimodal_few_shot brown \
+    --multimodal_few_shot cifar brown \
     --common-img-side-len 32 \
     --common-img-channel 3 \
     --num-batches 30000 \
@@ -36,13 +34,11 @@ python3 main.py \
     --device cuda:0 \
     --output-folder ${output_folder} > train_dir/${output_folder}/train.log
 
-
-
-output_folder=brown_10w1s
+output_folder=cifar_brown_2m10w1s
 mkdir train_dir/${output_folder}
 python3 main.py \
     --dataset multimodal_few_shot \
-    --multimodal_few_shot brown \
+    --multimodal_few_shot cifar brown \
     --common-img-side-len 32 \
     --common-img-channel 3 \
     --num-batches 30000 \
@@ -56,12 +52,11 @@ python3 main.py \
     --device cuda:0 \
     --output-folder ${output_folder} > train_dir/${output_folder}/train.log
 
-
-output_folder=brown_10w5s
+output_folder=cifar_brown_2m10w5s
 mkdir train_dir/${output_folder}
 python3 main.py \
     --dataset multimodal_few_shot \
-    --multimodal_few_shot brown \
+    --multimodal_few_shot cifar brown \
     --common-img-side-len 32 \
     --common-img-channel 3 \
     --num-batches 30000 \
