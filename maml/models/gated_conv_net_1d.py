@@ -22,10 +22,12 @@ class GatedConv1dModel(Model):
     """
     _audio_embed_stride = 320
     _image_embed_stride = 2
+    _text_embed_stride = 1
 
     _modality2task_names = {
         'audio': ['ESC50'],
-        'image': ['FC100']
+        'image': ['FC100'],
+        'text': ['BROWN']
     }
 
     def task_name2modelity(self, task_name):
@@ -59,6 +61,10 @@ class GatedConv1dModel(Model):
                                     self._num_channels,
                                     self._audio_embed_stride,
                                     stride=self._audio_embed_stride,),
+            'text': torch.nn.Conv1d(1, # text has 1 channel input
+                                    self._num_channels,
+                                    self._text_embed_stride,
+                                    stride=self._text_embed_stride,),
             'image': torch.nn.Conv2d(3, # image has 3 channel input
                                     self._num_channels,
                                     kernel_size=self._image_embed_stride,
@@ -230,7 +236,13 @@ class GatedConv1dModel(Model):
                              dilation=layer.dilation)
                 x = x.view(x.shape[0], x.shape[1], -1) # keep the bsz, dim, reshape a sequence 
             elif modality == 'text':
-                ...
+                layer: nn.Conv1d
+                x = F.conv1d(x, 
+                             weight=weight,
+                             bias=bias,
+                             stride=layer.stride,
+                             padding=layer.padding,
+                             dilation=layer.dilation)
             else:
                 raise ValueError(f'not valid task name {task_name}')
             return x
