@@ -6,6 +6,23 @@ import numpy as np
 
 
 class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
+
+    _audio_embed_stride = 320
+    _image_embed_stride = 2
+
+    _modality2task_names = {
+        'audio': ['ESC50'],
+        'image': ['FC100']
+    }
+
+    def task_name2modelity(self, task_name):
+        for modality, task_names in self._modality2task_names.items():
+            if task_name in task_names:
+                return modality
+        raise ValueError(f'not valid task name {task_name}')
+
+
+
     def __init__(self, input_size, output_size, embedding_dims,
                  hidden_size=128, num_layers=1,
                  convolutional=False, num_conv=4, num_channels=32, num_channels_max=256,
@@ -40,14 +57,24 @@ class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
         # TODO: plz do refactor this code here...
         # import pdb; pdb.set_trace();
         if self._convolutional:
-            self._conv_stride = 5
+            self.embeddings = nn.ModuleDict({
+                'audio': torch.nn.Conv1d(1, # audio has 1 channel input
+                                        self._num_channels,
+                                        self._audio_embed_stride,
+                                        stride=self._audio_embed_stride,),
+                'image': torch.nn.Conv2d(3, # image has 3 channel input
+                                        self._num_channels,
+                                        kernel_size=self._image_embed_stride,
+                                        stride=self._image_embed_stride,),
+            })
+            self._conv_stride = 1
             self._features_size = 1
-            self._kernel_size = 13
-            self._dialation = 5
+            self._kernel_size = 3
+            self._dialation = 1
             # self._padding = "same" # not for strided conv
             self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2 # this ensures the output to be devided by stride
             conv_list = OrderedDict([])
-            num_ch = [self._img_size[0]] + [self._num_channels*2**i for i in range(self._num_conv)]
+            num_ch = [self._num_channels] + [self._num_channels*2**i for i in range(self._num_conv)]
             num_ch = [min(num_channels_max, ch) for ch in num_ch]
             for i in range(self._num_conv):
                 conv_list.update({'conv{}'.format(i+1): torch.nn.Conv1d(num_ch[i],
@@ -99,6 +126,36 @@ class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
             current_img_size = (current_img_size+2*p-k)//s+1
         return ch * int(current_img_size) ** 2
 
+
+    def embed(self, x, task_name, params):
+            modality = self.task_name2modelity(task_name)
+            layer = self.embeddings[modality]
+            weight = params.get('embeddings.' + modality + '.weight', None)
+            bias = params.get('features.' + modality + '.bias', None)
+            if modality == 'audio':
+                layer: nn.Conv1d
+                x = F.conv1d(x, 
+                             weight=weight,
+                             bias=bias,
+                             stride=layer.stride,
+                             padding=layer.padding,
+                             dilation=layer.dilation)
+            elif modality == 'image':
+                layer: nn.Conv2d
+                x = F.conv2d(x, 
+                             weight=weight,
+                             bias=bias,
+                             stride=layer.stride,
+                             padding=layer.padding,
+                             dilation=layer.dilation)
+                x = x.view(x.shape[0], x.shape[1], -1) # keep the bsz, dim, reshape a sequence 
+            elif modality == 'text':
+                ...
+            else:
+                raise ValueError(f'not valid task name {task_name}')
+            return x
+
+
     def forward(self, task, params=None):
         if not self._reuse and self._verbose: print('='*8 + ' Emb Model ' + '='*8)
         if params is None:
@@ -106,7 +163,10 @@ class ConvEmbeddingOneDimensionalModel(torch.nn.Module):
         # import pdb; pdb.set_trace();
         if self._convolutional:
             x = task.x
+            task_name = task.task_info
             if not self._reuse and self._verbose: print('input size: {}'.format(x.size()))
+            x = self.embed(x, task_name, params)
+            if not self._reuse and self._verbose: print('embed size: {}'.format(x.size()))
             for layer_name, layer in self.conv.named_children():
                 layer: nn.Conv1d
                 weight = params.get('conv.' + layer_name + '.weight', None)
