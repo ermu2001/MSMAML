@@ -9,11 +9,113 @@ from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets.utils import list_files
-
+from torchvision.transforms.functional import to_pil_image
 from maml.sampler import ClassBalancedSampler
 from maml.datasets.metadataset import Task
 
 class Cifar100MAMLSplit():
+    classname = [
+        "apple",
+        "aquarium_fish",
+        "baby",
+        "bear",
+        "beaver",
+        "bed",
+        "bee",
+        "beetle",
+        "bicycle",
+        "bottle",
+        "bowl",
+        "boy",
+        "bridge",
+        "bus",
+        "butterfly",
+        "camel",
+        "can",
+        "castle",
+        "caterpillar",
+        "cattle",
+        "chair",
+        "chimpanzee",
+        "clock",
+        "cloud",
+        "cockroach",
+        "couch",
+        "crab",
+        "crocodile",
+        "cup",
+        "dinosaur",
+        "dolphin",
+        "elephant",
+        "flatfish",
+        "forest",
+        "fox",
+        "girl",
+        "hamster",
+        "house",
+        "kangaroo",
+        "keyboard",
+        "lamp",
+        "lawn_mower",
+        "leopard",
+        "lion",
+        "lizard",
+        "lobster",
+        "man",
+        "maple_tree",
+        "motorcycle",
+        "mountain",
+        "mouse",
+        "mushroom",
+        "oak_tree",
+        "orange",
+        "orchid",
+        "otter",
+        "palm_tree",
+        "pear",
+        "pickup_truck",
+        "pine_tree",
+        "plain",
+        "plate",
+        "poppy",
+        "porcupine",
+        "possum",
+        "rabbit",
+        "raccoon",
+        "ray",
+        "road",
+        "rocket",
+        "rose",
+        "sea",
+        "seal",
+        "shark",
+        "shrew",
+        "skunk",
+        "skyscraper",
+        "snail",
+        "snake",
+        "spider",
+        "squirrel",
+        "streetcar",
+        "sunflower",
+        "sweet_pepper",
+        "table",
+        "tank",
+        "telephone",
+        "television",
+        "tiger",
+        "tractor",
+        "train",
+        "trout",
+        "tulip",
+        "turtle",
+        "wardrobe",
+        "whale",
+        "willow_tree",
+        "wolf",
+        "woman",
+        "worm"
+    ]
     def __init__(self, root, train=True, num_train_classes=100,
                  transform=None, target_transform=None, **kwargs):
         self.transform = transform
@@ -25,11 +127,12 @@ class Cifar100MAMLSplit():
         self._img_channel = kwargs.pop('img_channel', 1)
         self._dataset = torch.load(self.root)
         if self._train:
-            self._images = torch.FloatTensor(self._dataset['data']['train'].reshape([-1, 3, 32, 32]))
+            self._images = torch.FloatTensor(self._dataset['data']['train'].reshape([-1, 3, 32, 32])) / 255
             self._labels = torch.LongTensor(self._dataset['label']['train'])
         else:
-            self._images = torch.FloatTensor(self._dataset['data']['test'].reshape([-1, 3, 32, 32]))
+            self._images = torch.FloatTensor(self._dataset['data']['test'].reshape([-1, 3, 32, 32])) / 255
             self._labels = torch.LongTensor(self._dataset['label']['test'])
+
 
     def __getitem__(self, index):
         image = self._images[index]
@@ -58,7 +161,6 @@ class Cifar100MetaDataset(object):
         self._train = train
         self._num_workers = num_workers
         self._device = device
-
         self._total_samples_per_class = (num_samples_per_class + num_val_samples)
         self._dataloader = self._get_cifar100_data_loader()
 
@@ -79,8 +181,9 @@ class Cifar100MetaDataset(object):
         dset = Cifar100MAMLSplit(self._root, transform=img_transform,
                                  train=self._train, download=True,
                                  num_train_classes=self._num_train_classes,
-                                 img_channel=self._img_channel)
+                                 img_channel=1)
         labels = dset._labels.numpy().tolist()
+        self.classname = dset.classname
         sampler = ClassBalancedSampler(labels, self._num_classes_per_batch,
                                        self._total_samples_per_class,
                                        self._num_total_batches, self._train)
@@ -99,6 +202,8 @@ class Cifar100MetaDataset(object):
         new_labels = list(range(self._num_classes_per_batch))
         random.shuffle(new_labels)
         labels = labels.tolist()
+        gts = labels.copy()
+        gts_tensor = torch.tensor(gts, device=self._device)
         label_set = set(labels)
         label_map = {label: new_labels[i] for i, label in enumerate(label_set)}
         labels = [label_map[l] for l in labels]
@@ -115,8 +220,8 @@ class Cifar100MetaDataset(object):
             train_indices.extend(indices[self._num_val_samples:])
         label_tensor = torch.tensor(labels, device=self._device)
         imgs = imgs.to(self._device)
-        train_task = Task(imgs[train_indices], label_tensor[train_indices], self.name)
-        val_task = Task(imgs[val_indices], label_tensor[val_indices], self.name)
+        train_task = Task(imgs[train_indices], label_tensor[train_indices], self.name, gts_tensor[train_indices])
+        val_task = Task(imgs[val_indices], label_tensor[val_indices], self.name, gts_tensor[train_indices])
         return train_task, val_task
 
     def _make_meta_batch(self, imgs, labels):

@@ -8,8 +8,8 @@ from tensorboardX import SummaryWriter
 
 from maml.datasets.omniglot import OmniglotMetaDataset
 from maml.datasets.miniimagenet import MiniimagenetMetaDataset
-from maml.datasets.cifar100_simulate_1d import Cifar100MetaDataset
-# from maml.datasets.cifar100 import Cifar100MetaDataset
+# from maml.datasets.cifar100_simulate_1d import Cifar100MetaDataset
+from maml.datasets.cifar100 import Cifar100MetaDataset
 from maml.datasets.esc50 import ESC50MetaDataset
 from maml.datasets.mnist import MNISTMetaDataset
 from maml.datasets.bird import BirdMetaDataset

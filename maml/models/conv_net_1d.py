@@ -20,6 +20,22 @@ class ConvModelOneDimensional(Model):
     TODO: enable 'non-transductive' setting as per
           https://arxiv.org/abs/1803.02999
     """
+    _audio_embed_stride = 320
+    _image_embed_stride = 2
+
+    _modality2task_names = {
+        'audio': ['ESC50'],
+        'image': ['FC100']
+    }
+
+
+    def task_name2modelity(self, task_name):
+        for modality, task_names in self._modality2task_names:
+            if task_name in task_names:
+                return modality
+        raise ValueError(f'not valid task name {task_name}')
+
+
     def __init__(self, input_channels, output_size, num_channels=64,
                  kernel_size=5, padding=2, nonlinearity=F.relu,
                  use_max_pool=False, img_side_len=28, verbose=False):
@@ -95,12 +111,22 @@ class ConvModelOneDimensional(Model):
                 ('layer4_relu', torch.nn.ReLU(inplace=True)),
             ]))
         else:
-            self._conv_stride = 4
-            self._dialation = 3
+            self._conv_stride = 1
+            self._dialation = 1
             self._padding = (self._dialation * (self._kernel_size - 1) - self._conv_stride + 1) // 2
             self._features_size = (img_side_len // 14)**2
+            self.embeddings = nn.ModuleDict({
+                'audio': torch.nn.Conv1d(1, # audio has 1 channel input
+                                         self._num_channels,
+                                         self._audio_embed_stride,
+                                         stride=self._audio_embed_stride,),
+                'image': torch.nn.Conv2d(3, # image has 3 channel input
+                                         self._num_channels,
+                                         kernel_size=self._image_embed_stride,
+                                         stride=self._image_embed_stride,),
+            })
             self.features = torch.nn.Sequential(OrderedDict([
-                ('layer1_conv', torch.nn.Conv1d(self._input_channels,
+                ('layer1_conv', torch.nn.Conv1d(self._num_channels,
                                                 self._num_channels,
                                                 self._kernel_size,
                                                 stride=self._conv_stride,
@@ -144,13 +170,43 @@ class ConvModelOneDimensional(Model):
         ]))
         self.apply(weight_init)
 
+    def embed(self, x, task_name, params):
+            modality = self.task_name2modelity(task_name)
+            layer = self.embeddings[modality]
+            weight = params.get('embeddings.' + modality + '.weight', None)
+            bias = params.get('features.' + modality + '.bias', None)
+            if modality == 'audio':
+                layer: nn.Conv1d
+                x = F.conv1d(x, 
+                             weight=weight,
+                             bias=bias,
+                             stride=layer.stride,
+                             padding=layer.padding,
+                             dilation=layer.dilation)
+            elif modality == 'image':
+                layer: nn.Conv2d
+                x = F.conv2d(x, 
+                             weight=weight,
+                             bias=bias,
+                             stride=layer.stride,
+                             padding=layer.padding,
+                             dilation=layer.dilation)
+            elif modality == 'text':
+                ...
+            else:
+                raise ValueError(f'not valid task name {task_name}')
+            return x
+
     def forward(self, task, params=None, embeddings=None):
         if not self._reuse and self._verbose: print('='*10 + ' Model ' + '='*10)
         if params is None:
             params = OrderedDict(self.named_parameters())
 
         x = task.x
+        task_name = task.task_info
         if not self._reuse and self._verbose: print('input size: {}'.format(x.size()))
+        x = self.embed(x, task_name, params)
+        if not self._reuse and self._verbose: print('embed size: {}'.format(x.size()))
         for layer_name, layer in self.features.named_children():
             layer: nn.Conv1d
             weight = params.get('features.' + layer_name + '.weight', None)

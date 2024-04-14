@@ -20,7 +20,9 @@ class MultimodalFewShotDataset(object):
         self._train = train
         self._verbose = verbose
         self._txt_file = open(txt_file, 'w') if not txt_file is None else None
-        
+        self._classmap = {
+            dataset.name: dataset.classname for dataset in datasets
+        }
         # make sure all input/output sizes match
         input_size_list = [dataset.input_size for dataset in self._datasets]
         # assert input_size_list.count(input_size_list[0]) == len(input_size_list)
@@ -100,3 +102,6 @@ class MultimodalFewShotDataset(object):
     def __iter__(self):
         self.n = 0
         return self
+
+    def get_class_name(self, dataset_name, label):
+        return self._classmap[dataset_name][label]
