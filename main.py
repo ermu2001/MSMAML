@@ -149,6 +149,12 @@ def parse_args(arg_list=None):
         choices=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist',
                  'bird', 'aircraft', 'esc50', 'mnist', 'brown'], 
         nargs='+')
+    parser.add_argument('--common-audio-side-len', type=int, default=2)
+    parser.add_argument('--common-audio-channel', type=int, default=1,
+                        help='1d for audio data')
+    parser.add_argument('--common-text-side-len', type=int, default=1)
+    parser.add_argument('--common-text-channel', type=int, default=1,
+                        help='1d for text data')
     parser.add_argument('--common-img-side-len', type=int, default=84)
     parser.add_argument('--common-img-channel', type=int, default=3,
                         help='3 for RGB and 1 for grayscale')

@@ -48,7 +48,7 @@ for idx, category in enumerate(brown.categories()):
         tok_texts.append(tokenized_text)
         categories.append(idx)
 
-model = Word2Vec(sentences=tok_texts, vector_size=3000, window=5, min_count=5, workers=4)
+model = Word2Vec(sentences=tok_texts, vector_size=1000, window=5, min_count=5, workers=4)
 
 for text in texts:
     vector = sum(model.wv[word] for word in text if word in model.wv) / len(text)
