@@ -22,7 +22,7 @@ class GatedConv1dModel(Model):
     """
     _audio_embed_stride = 320
     _image_embed_stride = 2
-    _text_embed_stride = 4
+    _text_embed_stride = 12
 
     _modality2task_names = {
         'audio': ['ESC50'],
@@ -61,7 +61,7 @@ class GatedConv1dModel(Model):
                                     self._num_channels,
                                     self._audio_embed_stride,
                                     stride=self._audio_embed_stride,),
-            'text': torch.nn.Conv1d(1, # text has 1 channel input
+            'text': torch.nn.Conv1d(128, # text has 128 channel input
                                     self._num_channels,
                                     self._text_embed_stride,
                                     stride=self._text_embed_stride,),

@@ -20,7 +20,7 @@ class BROWNMAMLSplit():
                  transform=None, target_transform=None, **kwargs):
         self.transform = transform
         self.target_transform = target_transform
-        self.root = os.path.join(root, 'brown.pth')
+        self.root = os.path.join(root, 'brown_sequence_3000.pth')
 
         self._train = train
         self._num_train_classes = num_train_classes
@@ -82,7 +82,6 @@ class BROWNMetaDataset(object):
         assert self._text_channel == 1 or self._text_channel == 3
         transforms = functools.partial(func_chain, functions=[
             torch.FloatTensor,
-            Resample(44_100, 16_000)
         ])
         dset = BROWNMAMLSplit(self._root, transform=transforms,
                                  train=self._train, download=True,
