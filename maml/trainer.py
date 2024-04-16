@@ -68,8 +68,7 @@ class Trainer(object):
                     if is_training:
                         accuracies = [[] for i in range(self._meta_dataset.num_dataset)]
                     for i, accuracy in enumerate(post_val_accuracies):
-                        accuracies[self._meta_dataset.dataset_names.index(
-                            val_tasks[i].task_info)].append(accuracy)
+                        accuracies[self._meta_dataset.dataset_names.index(val_tasks[i].task_info)].append(accuracy)
 
                     accuracy_str = []
                     for i, accuracy in enumerate(accuracies):
@@ -79,8 +78,7 @@ class Trainer(object):
                                   else '{:.3f}%'.format(100*np.mean(accuracy))))
 
                     print('Individual accuracies: {}'.format('  '.join(accuracy_str)))
-                    print('All accuracy: {:.3f}%'.format(100*np.mean(
-                        [item for accuracy in accuracies for item in accuracy])))
+                    print('All accuracy: {:.3f}%'.format(100*np.mean([item for accuracy in accuracies for item in accuracy])))
 
             # Collect evaluation statistics over full dataset
             if not is_training:
@@ -108,8 +106,7 @@ class Trainer(object):
             print('Evaluation results:')
             for key, value in sorted(results.items()):
                 if not isinstance(value, int):
-                    print('{}: {} +- {}'.format(
-                        key, np.mean(value), self.compute_confidence_interval(value)))
+                    print('{}: {} +- {}'.format(key, np.mean(value), self.compute_confidence_interval(value)))
                 else:
                     print('{}: {}'.format(key, value))
 

@@ -8,7 +8,7 @@ from tensorboardX import SummaryWriter
 
 from maml.datasets.omniglot import OmniglotMetaDataset
 from maml.datasets.miniimagenet import MiniimagenetMetaDataset
-# from maml.datasets.cifar100_simulate_1d import Cifar100MetaDataset
+from maml.datasets.cifar100_simulate_1d import Cifar1001dMetaDataset
 from maml.datasets.cifar100 import Cifar100MetaDataset
 from maml.datasets.esc50 import ESC50MetaDataset
 from maml.datasets.mnist import MNISTMetaDataset
@@ -16,11 +16,13 @@ from maml.datasets.brown import BROWNMetaDataset
 from maml.datasets.bird import BirdMetaDataset
 from maml.datasets.aircraft import AircraftMetaDataset
 from maml.datasets.multimodal_few_shot import MultimodalFewShotDataset
+from maml.models.conv_embedding_1d_model_noembed import ConvEmbeddingOneDimensionalNoEmbedModel
 from maml.models.fully_connected import FullyConnectedModel, MultiFullyConnectedModel
 from maml.models.conv_net import ConvModel
 from maml.models.conv_net_1d import ConvModelOneDimensional
 from maml.models.gated_conv_net_1d import GatedConv1dModel
 from maml.models.gated_conv_net import GatedConvModel
+from maml.models.gated_conv_net_1d_noembed import GatedConv1dNoEmbedModel
 from maml.models.gated_net import GatedNet
 from maml.models.simple_embedding_model import SimpleEmbeddingModel
 from maml.models.lstm_embedding_model import LSTMEmbeddingModel
@@ -147,7 +149,7 @@ def parse_args(arg_list=None):
     parser.add_argument('--multimodal_few_shot', type=str,
         default=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist'], 
         choices=['omniglot', 'cifar', 'miniimagenet', 'doublemnist', 'triplemnist',
-                 'bird', 'aircraft', 'esc50', 'mnist', 'brown'], 
+                 'bird', 'aircraft', 'esc50', 'mnist', 'brown', 'cifar1d'], 
         nargs='+')
     parser.add_argument('--common-audio-side-len', type=int, default=2)
     parser.add_argument('--common-audio-channel', type=int, default=1,
@@ -228,6 +230,22 @@ def main(args):
             device=args.device)
         loss_func = torch.nn.CrossEntropyLoss()
         collect_accuracies = True
+    elif args.dataset == 'cifar1d':
+        dataset = Cifar1001dMetaDataset(
+            root='data',
+            img_side_len=args.common_img_side_len,
+            img_channel=args.common_img_channel,
+            num_classes_per_batch=args.num_classes_per_batch,
+            num_samples_per_class=args.num_samples_per_class,
+            num_total_batches=args.num_batches,
+            num_val_samples=args.num_val_samples,
+            meta_batch_size=args.meta_batch_size,
+            train=is_training,
+            num_train_classes=args.num_train_classes,
+            num_workers=args.num_workers,
+            device=args.device)
+        loss_func = torch.nn.CrossEntropyLoss()
+        collect_accuracies = True
     elif args.dataset == 'cifar':
         dataset = Cifar100MetaDataset(
             root='data',
@@ -278,6 +296,21 @@ def main(args):
             )           
         if 'cifar' in args.multimodal_few_shot:
             dataset_list.append(Cifar100MetaDataset(
+                root='data',
+                img_side_len=args.common_img_side_len,
+                img_channel=args.common_img_channel,
+                num_classes_per_batch=args.num_classes_per_batch,
+                num_samples_per_class=args.num_samples_per_class,
+                num_total_batches=args.num_batches,
+                num_val_samples=args.num_val_samples,
+                meta_batch_size=args.meta_batch_size,
+                train=is_training,
+                num_train_classes=args.num_train_classes,
+                num_workers=args.num_workers,
+                device=args.device)
+            )
+        if 'cifar1d' in args.multimodal_few_shot:
+            dataset_list.append(Cifar1001dMetaDataset(
                 root='data',
                 img_side_len=args.common_img_side_len,
                 img_channel=args.common_img_channel,
@@ -622,6 +655,14 @@ def main(args):
             img_side_len=dataset.input_size[1],
             use_max_pool=args.use_max_pool,
             verbose=args.verbose)
+    elif args.model_type == 'gated_conv_1d_noembed':
+        model = GatedConv1dNoEmbedModel(
+            input_channels=1,
+            output_size=dataset.output_size,
+            num_channels=args.num_channels,
+            img_side_len=dataset.input_size[1],
+            use_max_pool=args.use_max_pool,
+            verbose=args.verbose)
     elif args.model_type == 'gated_conv_1d':
         model = GatedConv1dModel(
             input_channels=1,
@@ -713,7 +754,28 @@ def main(args):
              sample_embedding_file=args.sample_embedding_file+'.'+args.sample_embedding_file_type,
              img_size=[1],
              verbose=args.verbose)
-        embedding_parameters = list(embedding_model.parameters())    
+        embedding_parameters = list(embedding_model.parameters())
+    elif args.embedding_type == 'ConvGRU1dNoEmbed':
+        embedding_model = ConvEmbeddingOneDimensionalNoEmbedModel(
+             input_size=np.prod(dataset.input_size),
+             output_size=dataset.output_size,
+             embedding_dims=args.embedding_dims,
+             hidden_size=args.embedding_hidden_size,
+             num_layers=args.embedding_num_layers,
+             convolutional=args.conv_embedding,
+             num_conv=args.num_conv_embedding_layer,
+             num_channels=args.num_channels,
+             rnn_aggregation=(not args.no_rnn_aggregation),
+             embedding_pooling=args.embedding_pooling,
+             batch_norm=args.conv_embedding_batch_norm,
+             avgpool_after_conv=args.conv_embedding_avgpool_after_conv,
+             linear_before_rnn=args.linear_before_rnn,
+             num_sample_embedding=args.num_sample_embedding,
+             sample_embedding_file=args.sample_embedding_file+'.'+args.sample_embedding_file_type,
+             img_size=[1],
+             verbose=args.verbose)
+        embedding_parameters = list(embedding_model.parameters())
+        
     else:
         raise ValueError('Unrecognized embedding type {}'.format(
             args.embedding_type))
@@ -727,20 +789,22 @@ def main(args):
 
     if args.checkpoint != '':
         checkpoint = torch.load(args.checkpoint)
-        model.load_state_dict(checkpoint['model_state_dict'])
+        msg = model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+        print(f"UPON LOADING MODEL: {msg}")
         model.to(args.device)
-        if 'optimizer' in checkpoint:
-          pass
+        if embedding_model:
+            embedding_model.load_state_dict(checkpoint['embedding_model_state_dict'], strict=False)
+            print(f"UPON LOADING MODEL: {msg}")
+
+        if 'optimizers' in checkpoint and is_training:
+            msg = optimizers[0].load_state_dict(checkpoint['optimizers'][0],)
+            print(f"UPON LOADING MODEL: {msg}")
+            optimizer_to_device(optimizers[0], args.device)
+            if embedding_model:
+                optimizers[1].load_state_dict(checkpoint['optimizers'][1])
+                optimizer_to_device(optimizers[1], args.device)
         else:
-          optimizers[0].load_state_dict(checkpoint['optimizers'][0])
-          optimizer_to_device(optimizers[0], args.device)
-
-          if embedding_model:
-            embedding_model.load_state_dict(
-                checkpoint['embedding_model_state_dict'])
-            optimizers[1].load_state_dict(checkpoint['optimizers'][1])
-            optimizer_to_device(optimizers[1], args.device)
-
+            ...
     meta_learner = MetaLearner(
         model, embedding_model, optimizers, fast_lr=args.fast_lr,
         loss_func=loss_func, first_order=args.first_order,

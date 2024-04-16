@@ -141,7 +141,7 @@ class Cifar100MAMLSplit():
             image = self.transform(self._images[index])
         return image.view(self._img_channel, -1), self._labels[index]
 
-class Cifar100MetaDataset(object):
+class Cifar1001dMetaDataset(object):
     def __init__(self, name='CIFAR1001d', root='data', 
                  img_side_len=32, img_channel=3,
                  num_classes_per_batch=5, num_samples_per_class=6, 
