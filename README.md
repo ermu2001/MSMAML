@@ -24,19 +24,22 @@ We conducted Mix modality MMAML training on three different modalities:
 
 For vision, we used the CIFAR-100 used in the original MMAML. For language, we used the Brown dataset. For audio, we used the ESC50 dataset.
 
-Run the following command to download and preprocess the datasets
-
-TODO:
+Run the following command to download and preprocess the datasets, including all three modalities.
 
 ```bash
-python download.py --dataset aircraft bird cifar miniimagenet
+python get_dataset_script/get_esc.py
+python get_dataset_script/get_brown_3000.py
+python get_dataset_script/get_cifar.py
 ```
 
 ## Getting started
 
 Please first install the following prerequisites: `wget`, `unzip`.
-TODO:
-Install a torch on your server.
+Our code supports the cutting edge torch, thus, execute the following command and set up the environment:
+```bash
+conda create -n msmaml
+pip install -r requirements.pt2.txt
+```
 
 ## Usage
 
@@ -58,14 +61,14 @@ The executed scripts are as in the table:
 | audio & text & vision | 3m_cifar_brown_esc50.sh  | 3m_cifar_brown_esc50_eval.sh  |
 
 ## Results
-TODO: Maybe not in github?.
+We have made our results pulic at huggingface repo [ermu2001/SequenceMMAML](https://huggingface.co/ermu2001/SequenceMMAML).
 ## Related work
 
 - [Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks](https://arxiv.org/abs/1703.03400) in ICML 2017
 - [Multimodal Model-Agnostic Meta-Learning via Task-Aware Modulation](https://arxiv.org/abs/1910.13616)
 ## Cite the paper
 
-If you find this useful, please cite
+If you find this useful, please cite as following
 
 ```
 @misc{Zhao2024,
